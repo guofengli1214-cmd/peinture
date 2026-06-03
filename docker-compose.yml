@@ -1,9 +1,57 @@
-version: "3.8"
+# Peinture — full stack: MySQL + Node API + Nginx (static frontend + reverse proxy)
+# Copy .env.example to .env and fill in secrets before `docker compose up --build`.
 
 services:
-  peinture:
-    build: .
-    container_name: peinture
-    ports:
-      - "80:80"
+  db:
+    image: mysql:8.0
+    container_name: peinture-db
     restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-peinture}
+      MYSQL_USER: ${DB_USER:-peinture}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-peinture}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpeinture}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD:-rootpeinture}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: ./server
+    container_name: peinture-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-peinture}
+      DB_PASSWORD: ${DB_PASSWORD:-peinture}
+      DB_NAME: ${DB_NAME:-peinture}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in .env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-168}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    expose:
+      - "3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peinture-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-80}:80"
+
+volumes:
+  db_data:

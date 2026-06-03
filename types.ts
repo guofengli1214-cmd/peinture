@@ -81,6 +81,105 @@ export type ProviderOption = "huggingface" | "gitee" | "modelscope" | "a4f" | "o
 
 export type ProviderId = 'huggingface' | 'gitee' | 'modelscope' | 'a4f' | 'openai' | 'google';
 
+export type UserRole = 'user' | 'admin';
+
+/** The authenticated user as exposed to the browser (never includes secrets). */
+export interface PublicUser {
+    id: number;
+    username: string;
+    role: UserRole;
+    displayName: string | null;
+}
+
+/** A user account as seen by an admin in the management panel. */
+export interface AdminUser {
+    id: number;
+    username: string;
+    role: UserRole;
+    displayName: string | null;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+/** A custom provider as returned by the server: metadata + a hasToken flag, never the raw token. */
+export interface ServerCustomProvider {
+    id: string;
+    name: string;
+    apiUrl: string;
+    models: RemoteModelList;
+    enabled: boolean;
+    hasToken: boolean;
+}
+
+// --- User-defined / relay API providers (OpenAI / Claude / Gemini formats) ---
+export type ApiProviderFormat = 'openai' | 'claude' | 'gemini';
+export type ApiProviderCapability = 'image' | 'edit' | 'text';
+
+export interface ApiProviderModelDef {
+    modelId: string;
+    name: string;
+    capabilities: ApiProviderCapability[];
+}
+
+/** A custom/relay provider as exposed to the browser (no raw secret). */
+export interface CustomApiProvider {
+    id: string;
+    scope: 'global' | 'user';
+    managedBy: 'admin' | 'self';
+    ownerUserId: number | null;
+    name: string;
+    apiUrl: string;
+    format: ApiProviderFormat;
+    models: ApiProviderModelDef[];
+    enabled: boolean;
+    hasSecret: boolean;
+    /** True only when the requesting user may edit/delete this provider. */
+    editable: boolean;
+}
+
+export interface CustomApiProviderInput {
+    name: string;
+    apiUrl: string;
+    format: ApiProviderFormat;
+    models: ApiProviderModelDef[];
+    /** Plaintext key; omit to leave unchanged on update, null/'' to clear. */
+    secret?: string | null;
+    enabled?: boolean;
+}
+
+/**
+ * The per-user configuration as returned by `GET /api/config`. Mirrors the
+ * server's PublicConfig: all non-secret settings, per-provider hasTokens flags
+ * (never raw tokens), and the owner's storage credentials.
+ */
+export interface ServerPublicConfig {
+    language: string;
+    provider: string;
+    model: string;
+    aspectRatio: string;
+    seed: string;
+    steps: number;
+    guidanceScale: number;
+    autoTranslate: boolean;
+    enableHD: boolean;
+    serviceMode: ServiceMode;
+    storageType: StorageType;
+    systemPrompt: string;
+    translationPrompt: string;
+    editModelConfig: { provider: string; model: string };
+    liveModelConfig: { provider: string; model: string };
+    textModelConfig: { provider: string; model: string };
+    upscalerModelConfig: { provider: string; model: string };
+    openaiConfig: { apiUrl: string; modelId: string };
+    googleConfig: { apiUrl: string; modelId: string };
+    videoSettings: Record<string, VideoSettings>;
+    customProviders: ServerCustomProvider[];
+    hasTokens: Record<ProviderId, boolean>;
+    s3Config: S3Config;
+    webdavConfig: WebDAVConfig;
+}
+
 export interface TokenStatus {
     date: string;
     exhausted: Record<string, boolean>;

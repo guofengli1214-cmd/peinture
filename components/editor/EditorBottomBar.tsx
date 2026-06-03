@@ -54,7 +54,7 @@ export const EditorBottomBar: React.FC<EditorBottomBarProps> = ({
 
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-30 select-none">
-      <div className="relative flex items-center h-14 pl-2 pr-1.5 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl shadow-black/40 ring-1 ring-white/5">
+      <div className="relative flex items-center h-14 pl-2 pr-1.5 bg-surface/90 backdrop-blur-xl border border-stroke rounded-full shadow-flyout ring-1 ring-stroke-subtle">
         <div className="flex items-center mr-2">
           {attachedImages.map((img, idx) => (
             <Tooltip
@@ -62,7 +62,7 @@ export const EditorBottomBar: React.FC<EditorBottomBarProps> = ({
               content={t.ref_image_n.replace("{n}", (idx + 1).toString())}
             >
               <div
-                className={`relative w-8 h-8 rounded-full overflow-hidden border border-purple-500/50 group flex-shrink-0 bg-[#0D0B14] ${idx > 0 ? "-ml-3" : ""}`}
+                className={`relative w-8 h-8 rounded-full overflow-hidden border border-accent/50 group flex-shrink-0 bg-surface ${idx > 0 ? "-ml-3" : ""}`}
                 style={{ zIndex: 10 + idx }}
               >
                 <div className="w-full h-full relative">
@@ -97,7 +97,7 @@ export const EditorBottomBar: React.FC<EditorBottomBarProps> = ({
               <Tooltip content={t.upload_ref_image}>
                 <label
                   htmlFor="cmd-image-upload"
-                  className="flex items-center justify-center w-8 h-8 rounded-full cursor-pointer transition-all hover:bg-white/10 text-white/50 border border-white/5 hover:border-white/20 hover:text-white"
+                  className="flex items-center justify-center w-8 h-8 rounded-full cursor-pointer transition-all hover:bg-fill text-ink-tertiary border border-stroke-subtle hover:border-stroke hover:text-ink"
                 >
                   <ImagePlus className="w-4 h-4" />
                 </label>
@@ -110,7 +110,7 @@ export const EditorBottomBar: React.FC<EditorBottomBarProps> = ({
           <button
             onClick={onOptimize}
             disabled={isOptimizing || !prompt.trim()}
-            className="flex items-center justify-center w-8 h-full text-purple-500/80 hover:text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed mr-1 active:scale-90 transition-transform"
+            className="flex items-center justify-center w-8 h-full text-accent/80 hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed mr-1 active:scale-90 transition-transform"
           >
             {isOptimizing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -132,7 +132,7 @@ export const EditorBottomBar: React.FC<EditorBottomBarProps> = ({
           }}
           placeholder={t.editor_placeholder}
           disabled={isGenerating}
-          className="flex-1 bg-transparent border-0 text-white placeholder:text-white/30 focus:ring-0 h-full text-sm font-medium px-0 min-w-0 disabled:opacity-50"
+          className="flex-1 bg-transparent border-0 text-ink placeholder:text-ink-placeholder focus:ring-0 h-full text-sm font-medium px-0 min-w-0 disabled:opacity-50"
         />
 
         <button
@@ -144,8 +144,8 @@ export const EditorBottomBar: React.FC<EditorBottomBarProps> = ({
                         disabled:grayscale disabled:opacity-50
                         ${
                           isGenerating
-                            ? "w-11 h-11 rounded-full p-0 flex-shrink-0 bg-white/60 hover:bg-white/80 text-white shadow-white/20 cursor-pointer"
-                            : "px-4 py-2 rounded-full flex-shrink-0 generate-button-gradient text-white shadow-purple-900/20"
+                            ? "w-11 h-11 rounded-full p-0 flex-shrink-0 bg-accent hover:bg-accent-hover text-on-accent shadow-card cursor-pointer"
+                            : "px-4 py-2 rounded-full flex-shrink-0 generate-button-gradient text-on-accent shadow-card"
                         }
                     `}
         >

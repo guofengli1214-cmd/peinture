@@ -40,7 +40,7 @@ import {
   addToPromptHistory,
 } from "../services/utils";
 import { getDefaultModelParams } from "../services/modelUtils";
-import { saveTempFileToOPFS } from "../services/storageService";
+import { saveTempFileToOPFS, fetchCloudBlob } from "../services/storageService";
 import { resolveErrorMessage } from "../services/errorUtils";
 import {
   HF_MODEL_OPTIONS,
@@ -427,12 +427,17 @@ export const useCreationGeneration = () => {
         );
         if (activeProvider) {
           const settings = getVideoSettings(currentVideoProvider);
-          const urlToUse =
-            typeof imageInput === "string" ? imageInput : currentImage.url;
+          // Upload the image bytes — the server can't fetch a blob:/opfs: URL.
+          const imageBlob =
+            imageInput instanceof Blob
+              ? imageInput
+              : currentImage.url.startsWith("opfs://")
+                ? await fetchCloudBlob(currentImage.url)
+                : await fetchBlob(currentImage.url);
           const result = await generateCustomVideo(
             activeProvider,
             liveConfig.model,
-            urlToUse,
+            imageBlob,
             settings.prompt,
             settings.duration,
             currentImage.seed ?? 42,

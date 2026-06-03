@@ -27,10 +27,8 @@ import {
   getCustomProviders,
   addCustomProvider,
   removeCustomProvider,
-  saveCustomProviders,
   generateUUID,
   getServiceMode,
-  saveServiceMode,
 } from "../services/utils";
 import { transformModelList } from "../services/customService";
 import {
@@ -49,11 +47,8 @@ import { useStorageForm } from "./useStorageForm";
 export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
   const { provider, setProvider, model, setModel } = useSettingsStore();
   const {
-    setProviderTokens,
     openaiConfig: initialOpenaiConfig,
     googleConfig: initialGoogleConfig,
-    setOpenAIConfig,
-    setGoogleConfig,
   } = useConfigStore();
 
   // Composed sub-hooks
@@ -436,17 +431,10 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
   };
 
   const handleSave = () => {
-    // Dispatch actions to update store tokens
-    setProviderTokens("huggingface", tokensForm.token);
-    setProviderTokens("gitee", tokensForm.giteeToken);
-    setProviderTokens("modelscope", tokensForm.msToken);
-    setProviderTokens("a4f", tokensForm.a4fToken);
-    setProviderTokens("openai", tokensForm.openaiToken);
-    setProviderTokens("google", tokensForm.googleToken);
-
-    setOpenAIConfig(openaiConfigState);
-    setGoogleConfig(googleConfigState);
-
+    // Only self-editable preferences are persisted from this dialog and synced
+    // to the server (debounced) via the config store. Provider tokens, custom
+    // providers, service mode and OpenAI/Google endpoints are admin-managed and
+    // assigned through the admin panel — never written here.
     saveSystemPromptContent(systemPrompt);
     saveTranslationPromptContent(translationPrompt);
     saveVideoSettings(provider, videoSettings);
@@ -457,9 +445,6 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
     saveLiveModelConfig(liveModelValue);
     saveTextModelConfig(textModelValue);
     saveUpscalerModelConfig(upscalerModelValue);
-
-    saveServiceMode(serviceMode);
-    saveCustomProviders(customProviders);
 
     if (creationModelValue) {
       const [newProvider, newModel] = creationModelValue.split(":");

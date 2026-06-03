@@ -41,7 +41,7 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
       <div className="space-y-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <label className="text-sm font-medium text-white/80 w-1/3 flex-shrink-0">
+            <label className="text-sm font-medium text-ink w-1/3 flex-shrink-0">
               {t.s3_access_key}
             </label>
             <input
@@ -53,11 +53,11 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                   accessKeyId: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-green-500/50 transition-all font-mono"
+              className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all font-mono"
             />
           </div>
           <div className="flex items-center justify-between gap-4">
-            <label className="text-sm font-medium text-white/80 w-1/3 flex-shrink-0">
+            <label className="text-sm font-medium text-ink w-1/3 flex-shrink-0">
               {t.s3_secret_key}
             </label>
             <div className="relative w-full">
@@ -70,12 +70,12 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                     secretAccessKey: e.target.value,
                   })
                 }
-                className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-green-500/50 transition-all font-mono pr-8"
+                className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all font-mono pr-8"
               />
               <button
                 type="button"
                 onClick={() => setShowS3Secret(!showS3Secret)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-tertiary hover:text-ink"
               >
                 {showS3Secret ? (
                   <EyeOff className="w-3.5 h-3.5" />
@@ -87,7 +87,7 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
           </div>
           <div className="flex gap-4">
             <div className="flex-1 space-y-1">
-              <label className="text-xs font-medium text-white/60 block">
+              <label className="text-xs font-medium text-ink-secondary block">
                 {t.s3_bucket}
               </label>
               <input
@@ -99,11 +99,11 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                     bucket: e.target.value,
                   })
                 }
-                className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-green-500/50 transition-all"
+                className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all"
               />
             </div>
             <div className="w-1/3 space-y-1">
-              <label className="text-xs font-medium text-white/60 block">
+              <label className="text-xs font-medium text-ink-secondary block">
                 {t.s3_region}
               </label>
               <input
@@ -115,12 +115,12 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                     region: e.target.value,
                   })
                 }
-                className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-green-500/50 transition-all"
+                className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all"
               />
             </div>
           </div>
           <div className="flex-1 space-y-1">
-            <label className="text-xs font-medium text-white/60 block">
+            <label className="text-xs font-medium text-ink-secondary block">
               {t.s3_endpoint}
             </label>
             <input
@@ -133,12 +133,12 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                 })
               }
               placeholder={getEndpointPlaceholder()}
-              className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-green-500/50 transition-all"
+              className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all"
             />
           </div>
           <div className="flex gap-4">
             <div className="flex-1 space-y-1">
-              <label className="text-xs font-medium text-white/60 block">
+              <label className="text-xs font-medium text-ink-secondary block">
                 {t.s3_domain}
               </label>
               <input
@@ -151,11 +151,11 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                   })
                 }
                 placeholder={t.s3_domain_placeholder}
-                className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-green-500/50 transition-all"
+                className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all"
               />
             </div>
             <div className="flex-1 space-y-1">
-              <label className="text-xs font-medium text-white/60 block">
+              <label className="text-xs font-medium text-ink-secondary block">
                 {t.s3_prefix}
               </label>
               <input
@@ -168,7 +168,7 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                   })
                 }
                 placeholder={t.s3_prefix_placeholder}
-                className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-green-500/50 transition-all font-mono"
+                className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all font-mono"
               />
             </div>
           </div>
@@ -215,7 +215,7 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
       <div className="space-y-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <label className="text-sm font-medium text-white/80 w-1/3 flex-shrink-0">
+            <label className="text-sm font-medium text-ink w-1/3 flex-shrink-0">
               {t.webdav_url}
             </label>
             <input
@@ -228,11 +228,11 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                 })
               }
               placeholder={t.webdav_url_placeholder}
-              className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-blue-500/50 transition-all font-mono"
+              className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all font-mono"
             />
           </div>
           <div className="flex items-center justify-between gap-4">
-            <label className="text-sm font-medium text-white/80 w-1/3 flex-shrink-0">
+            <label className="text-sm font-medium text-ink w-1/3 flex-shrink-0">
               {t.webdav_username}
             </label>
             <input
@@ -244,11 +244,11 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                   username: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-blue-500/50 transition-all font-mono"
+              className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all font-mono"
             />
           </div>
           <div className="flex items-center justify-between gap-4">
-            <label className="text-sm font-medium text-white/80 w-1/3 flex-shrink-0">
+            <label className="text-sm font-medium text-ink w-1/3 flex-shrink-0">
               {t.webdav_password}
             </label>
             <div className="relative w-full">
@@ -261,12 +261,12 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                     password: e.target.value,
                   })
                 }
-                className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-blue-500/50 transition-all font-mono pr-8"
+                className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all font-mono pr-8"
               />
               <button
                 type="button"
                 onClick={() => setShowWebdavPass(!showWebdavPass)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-tertiary hover:text-ink"
               >
                 {showWebdavPass ? (
                   <EyeOff className="w-3.5 h-3.5" />
@@ -277,7 +277,7 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
             </div>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <label className="text-sm font-medium text-white/80 w-1/3 flex-shrink-0">
+            <label className="text-sm font-medium text-ink w-1/3 flex-shrink-0">
               {t.webdav_directory}
             </label>
             <input
@@ -289,7 +289,7 @@ export const StorageTab: React.FC<StorageTabProps> = (props) => {
                   directory: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white text-sm focus:outline-0 focus:border-blue-500/50 transition-all font-mono"
+              className="w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-all font-mono"
             />
           </div>
           <div className="flex flex-col gap-2">

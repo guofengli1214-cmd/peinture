@@ -97,22 +97,22 @@ export const ImageComparison: React.FC<ImageComparisonProps> = ({
 
         {/* Slider Handle */}
         <div
-          className="absolute top-0 bottom-0 w-0.5 bg-white/60 cursor-ew-resize z-20 group"
+          className="absolute top-0 bottom-0 w-0.5 bg-accent cursor-ew-resize z-20 group"
           style={{ left: `${position}%` }}
         >
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center text-white shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-transform group-hover:scale-110">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-surface/90 backdrop-blur-md border border-stroke rounded-full flex items-center justify-center text-accent shadow-card transition-transform group-hover:scale-110">
             <ChevronsLeftRight className="w-4 h-4" />
           </div>
         </div>
 
         {/* Labels */}
         <div
-          className={`absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded border border-white/10 z-10 pointer-events-none transition-opacity duration-300 ${position < 15 ? "opacity-0" : "opacity-100"}`}
+          className={`absolute top-3 left-3 bg-surface/85 backdrop-blur-md text-ink text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded border border-stroke z-10 pointer-events-none transition-opacity duration-300 ${position < 15 ? "opacity-0" : "opacity-100"}`}
         >
           {labelBefore}
         </div>
         <div
-          className={`absolute top-3 right-3 bg-purple-600/90 backdrop-blur-md text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded border border-white/10 z-10 pointer-events-none transition-opacity duration-300 ${position > 85 ? "opacity-0" : "opacity-100"}`}
+          className={`absolute top-3 right-3 bg-accent/90 backdrop-blur-md text-on-accent text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded border border-stroke z-10 pointer-events-none transition-opacity duration-300 ${position > 85 ? "opacity-0" : "opacity-100"}`}
         >
           {labelAfter}
         </div>

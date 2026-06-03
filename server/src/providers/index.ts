@@ -1,0 +1,108 @@
+import type { AppContext } from "../context";
+import type { ProviderId } from "../services/userConfig";
+import { getProviderTokens } from "../services/userConfig";
+import { resolveForUse } from "../services/customProviders";
+import { parseModelId } from "./models";
+import { ADAPTERS } from "./formats/index";
+import {
+  generateHF,
+  editHF,
+  optimizeHF,
+  upscaleHF,
+  videoHF,
+  type GenerateParams,
+  type GenerateResult,
+} from "./huggingface";
+
+/**
+ * Provider dispatch for the generation proxy.
+ *
+ *  - "huggingface"            -> the ported HF engine (Phase 6a)
+ *  - other builtin names      -> not yet ported (Phase 6b) -> provider_not_supported
+ *  - anything else (a UUID)   -> a user/global custom provider, routed by its
+ *                                stored format (OpenAI / Claude / Gemini) via ADAPTERS
+ */
+
+const BUILTINS: ProviderId[] = ["huggingface", "gitee", "modelscope", "a4f", "openai", "google"];
+const HF: ProviderId = "huggingface";
+
+function isBuiltin(provider: string): boolean {
+  return (BUILTINS as string[]).includes(provider);
+}
+
+async function tokensFor(ctx: AppContext, userId: number, provider: string): Promise<string[]> {
+  if (!isBuiltin(provider)) return [];
+  return getProviderTokens(ctx, userId, provider as ProviderId);
+}
+
+export async function dispatchGenerate(
+  ctx: AppContext,
+  userId: number,
+  qualifiedModel: string,
+  params: GenerateParams,
+): Promise<GenerateResult> {
+  const { provider, modelId } = parseModelId(qualifiedModel);
+  if (provider === HF) return generateHF(modelId, params, await tokensFor(ctx, userId, provider));
+  if (isBuiltin(provider)) throw new Error("provider_not_supported");
+
+  const cp = await resolveForUse(ctx, userId, provider);
+  const { url } = await ADAPTERS[cp.format].generate(cp.apiUrl, cp.secret, modelId, params);
+  return { id: crypto.randomUUID(), url, seed: params.seed, steps: params.steps, guidance: params.guidance };
+}
+
+export async function dispatchEdit(
+  ctx: AppContext,
+  userId: number,
+  qualifiedModel: string,
+  images: Blob[],
+  prompt: string,
+  opts: { width?: number; height?: number; steps?: number; guidance?: number },
+): Promise<{ id: string; url: string; seed?: number }> {
+  const { provider, modelId } = parseModelId(qualifiedModel);
+  if (provider === HF) return editHF(images, prompt, opts, await tokensFor(ctx, userId, provider));
+  if (isBuiltin(provider)) throw new Error("provider_not_supported");
+
+  const cp = await resolveForUse(ctx, userId, provider);
+  const { url } = await ADAPTERS[cp.format].edit(cp.apiUrl, cp.secret, modelId, images, prompt, opts);
+  return { id: crypto.randomUUID(), url };
+}
+
+export async function dispatchText(
+  ctx: AppContext,
+  userId: number,
+  qualifiedModel: string,
+  prompt: string,
+  systemPrompt: string,
+): Promise<string> {
+  const { provider, modelId } = parseModelId(qualifiedModel);
+  if (provider === HF) return optimizeHF(prompt, systemPrompt, modelId);
+  if (isBuiltin(provider)) throw new Error("provider_not_supported");
+
+  const cp = await resolveForUse(ctx, userId, provider);
+  return ADAPTERS[cp.format].text(cp.apiUrl, cp.secret, modelId, prompt, systemPrompt);
+}
+
+/** HD upscale — HuggingFace only (RealESRGAN). */
+export async function dispatchUpscale(
+  ctx: AppContext,
+  userId: number,
+  qualifiedModel: string,
+  image: Blob,
+): Promise<{ url: string }> {
+  const { provider } = parseModelId(qualifiedModel);
+  if (provider === HF) return upscaleHF(image, await tokensFor(ctx, userId, provider));
+  throw new Error("provider_not_supported");
+}
+
+/** Image→video (Live) — HuggingFace only (Wan 2.2), synchronous via Gradio. */
+export async function dispatchVideo(
+  ctx: AppContext,
+  userId: number,
+  qualifiedModel: string,
+  image: Blob,
+  opts: { prompt: string; duration: number; steps: number; guidance: number; seed?: number },
+): Promise<{ url: string }> {
+  const { provider } = parseModelId(qualifiedModel);
+  if (provider === HF) return videoHF(image, opts, await tokensFor(ctx, userId, provider));
+  throw new Error("provider_not_supported");
+}

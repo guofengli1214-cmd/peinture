@@ -1,16 +1,13 @@
 # Stage 1: Build the React application
 FROM node:20-alpine AS builder
 
-# Enable pnpm
-RUN corepack enable pnpm
-
 WORKDIR /app
 
 # Copy dependency files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -19,7 +16,7 @@ COPY . .
 ENV VITE_PROXY_URL=/proxy
 
 # Build the project
-RUN pnpm build
+RUN npm run build
 
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine

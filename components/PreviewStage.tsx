@@ -34,7 +34,7 @@ const TimerDisplay = () => {
     return () => clearInterval(interval);
   }, []);
   return (
-    <p className="mt-2 font-mono text-purple-300 text-lg">
+    <p className="mt-2 font-mono text-accent text-lg">
       {elapsed.toFixed(1)}s
     </p>
   );
@@ -104,16 +104,16 @@ export const PreviewStage: React.FC<PreviewStageProps> = ({
   const isLiveGenerating = displayImage?.videoStatus === "generating";
 
   return (
-    <section className="relative w-full flex flex-col h-[360px] md:h-[480px] items-center justify-center bg-black/20 rounded-xl backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20 overflow-hidden group">
+    <section className="relative w-full flex flex-col h-[360px] md:h-[480px] items-center justify-center acrylic-card rounded-lg overflow-hidden group">
       {isWorking ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/40 backdrop-blur-sm animate-in fade-in duration-500">
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-canvas/60 backdrop-blur-sm animate-in fade-in duration-500">
           <div className="relative">
-            <div className="h-24 w-24 rounded-full border-4 border-white/10 border-t-purple-500 animate-spin"></div>
+            <div className="h-24 w-24 rounded-full border-4 border-stroke border-t-accent animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Paintbrush className="text-purple-400 animate-pulse w-8 h-8" />
+              <Paintbrush className="text-accent animate-pulse w-8 h-8" />
             </div>
           </div>
-          <p className="mt-8 text-white/80 font-medium animate-pulse text-lg">
+          <p className="mt-8 text-ink-secondary font-medium animate-pulse text-lg">
             {isTranslating ? t.translating : t.dreaming}
           </p>
           {!isTranslating && <TimerDisplay />}
@@ -181,7 +181,7 @@ export const PreviewStage: React.FC<PreviewStageProps> = ({
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center animate-pulse">
-                    <ImageIcon className="w-16 h-16 text-white/10" />
+                    <ImageIcon className="w-16 h-16 text-ink/10" />
                   </div>
                 )}
               </TransformComponent>
@@ -190,7 +190,7 @@ export const PreviewStage: React.FC<PreviewStageProps> = ({
 
           {/* Live Generation Overlay for both Prompt and Video generation phases */}
           {(isGeneratingVideoPrompt || isLiveGenerating) && !isLiveMode && (
-            <div className="absolute top-4 right-4 bg-black/60 backdrop-blur text-white/80 text-xs px-2 py-1 rounded flex items-center gap-1.5 border border-white/10 z-20">
+            <div className="absolute top-4 right-4 bg-surface/85 backdrop-blur text-ink-secondary text-xs px-2 py-1 rounded flex items-center gap-1.5 border border-stroke z-20">
               <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
               {isGeneratingVideoPrompt
                 ? t.liveGeneratingDesc
@@ -205,11 +205,11 @@ export const PreviewStage: React.FC<PreviewStageProps> = ({
               <div className="absolute top-4 right-4 z-20">
                 <button
                   onClick={onToggleLiveMode}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-white/20 text-white/90 hover:bg-white/10 transition-all shadow-lg active:scale-95"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface/85 backdrop-blur border border-stroke text-ink hover:bg-fill transition-all shadow-card active:scale-95"
                 >
                   {isLiveMode ? (
                     <>
-                      <ImageIcon className="w-4 h-4 text-purple-400" />
+                      <ImageIcon className="w-4 h-4 text-accent" />
                       <span className="text-xs font-medium">Image</span>
                     </>
                   ) : (
@@ -226,15 +226,15 @@ export const PreviewStage: React.FC<PreviewStageProps> = ({
         </div>
       ) : (
         !isWorking && (
-          <div className="text-center text-white/60 p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="text-center text-ink-secondary p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="relative inline-block">
-              <Sparkles className="w-20 h-20 text-white/10" />
-              <Sparkles className="w-20 h-20 text-purple-500/40 absolute top-0 left-0 blur-lg animate-pulse" />
+              <Sparkles className="w-20 h-20 text-ink/10" />
+              <Sparkles className="w-20 h-20 text-accent/40 absolute top-0 left-0 blur-lg animate-pulse" />
             </div>
-            <h2 className="mt-6 text-2xl font-bold text-white/90">
+            <h2 className="mt-6 text-2xl font-bold text-ink">
               {t.galleryEmptyTitle}
             </h2>
-            <p className="mt-2 text-base text-white/40 max-w-xs mx-auto">
+            <p className="mt-2 text-base text-ink-tertiary max-w-xs mx-auto">
               {t.galleryEmptyDesc}
             </p>
           </div>

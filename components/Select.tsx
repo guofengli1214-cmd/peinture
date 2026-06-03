@@ -97,8 +97,8 @@ export const Select: React.FC<SelectProps> = ({
       }}
       className={`
         w-full flex items-center justify-between px-4 py-2.5 text-sm text-left
-        transition-colors hover:bg-white/10
-        ${option.value === value ? "text-purple-400 bg-white/5" : "text-white/80"}
+        transition-colors hover:bg-fill
+        ${option.value === value ? "text-accent bg-accent-light" : "text-ink-secondary"}
       `}
     >
       <span className="truncate mr-2">{option.label}</span>
@@ -119,7 +119,7 @@ export const Select: React.FC<SelectProps> = ({
         }
       >
         <p
-          className={`text-white font-medium leading-normal group-focus-within:text-purple-400 transition-colors ${dense ? "text-sm" : "text-lg"} ${horizontal ? "truncate" : ""}`}
+          className={`text-ink font-medium leading-normal group-focus-within:text-accent transition-colors ${dense ? "text-sm" : "text-lg"} ${horizontal ? "truncate" : ""}`}
         >
           {label}
         </p>
@@ -132,20 +132,20 @@ export const Select: React.FC<SelectProps> = ({
           onClick={() => setIsOpen(!isOpen)}
           className={`
               relative w-full flex items-center justify-between rounded-lg 
-              text-white/90 border border-white/10 bg-white/5 
-              focus:outline-0 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500
+              text-ink fluent-field 
+              focus:outline-none
               transition-all px-4 text-sm font-medium
-              ${isOpen ? "ring-2 ring-purple-500/50 border-purple-500" : ""}
+              ${isOpen ? "" : ""}
               ${dense ? "h-10" : "h-12"}
             `}
         >
           <div className="flex items-center gap-3 overflow-hidden">
             {icon && (
-              <span className="text-white/40 flex-shrink-0">{icon}</span>
+              <span className="text-ink-tertiary flex-shrink-0">{icon}</span>
             )}
             <span className="truncate">{selectedOption?.label || value}</span>
           </div>
-          <ChevronsUpDown className="text-white/40 w-5 h-5 flex-shrink-0 ml-2" />
+          <ChevronsUpDown className="text-ink-tertiary w-5 h-5 flex-shrink-0 ml-2" />
         </button>
 
         <div
@@ -161,7 +161,7 @@ export const Select: React.FC<SelectProps> = ({
             `}
         >
           <div className="overflow-hidden">
-            <div className="bg-[#1A1625] border border-white/10 rounded-lg shadow-xl overflow-hidden">
+            <div className="bg-surface border border-stroke rounded-lg shadow-flyout overflow-hidden">
               <div
                 className="overflow-y-auto py-2 custom-scrollbar"
                 style={{ maxHeight: `${maxHeight}px` }}
@@ -173,9 +173,9 @@ export const Select: React.FC<SelectProps> = ({
 
                     return (
                       <div key={item.label || index} className="mb-1 last:mb-0">
-                        <div className="px-4 py-1.5 text-[10px] font-bold text-white/40 uppercase tracking-wider flex items-center gap-2">
+                        <div className="px-4 py-1.5 text-[10px] font-bold text-ink-tertiary uppercase tracking-wider flex items-center gap-2">
                           {item.label}
-                          <div className="h-px bg-white/10 flex-1"></div>
+                          <div className="h-px bg-stroke flex-1"></div>
                         </div>
                         {item.options.map((opt) => renderOption(opt))}
                       </div>

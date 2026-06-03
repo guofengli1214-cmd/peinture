@@ -70,7 +70,11 @@ export const getEditModelConfig = (): { provider: string; model: string } => {
 };
 
 export const saveEditModelConfig = (value: string) => {
-  const [provider, model] = value.split(":");
+  // Split on the FIRST colon only: model ids may themselves contain ':'
+  // (e.g. the server provider exposes "huggingface:qwen-image-edit").
+  const idx = value.indexOf(":");
+  const provider = idx > 0 ? value.slice(0, idx) : "";
+  const model = idx > 0 ? value.slice(idx + 1) : "";
   if (provider && model) {
     useConfigStore.getState().setEditModelConfig({ provider, model });
   }
@@ -81,7 +85,11 @@ export const getLiveModelConfig = (): { provider: string; model: string } => {
 };
 
 export const saveLiveModelConfig = (value: string) => {
-  const [provider, model] = value.split(":");
+  // Split on the FIRST colon only: model ids may themselves contain ':'
+  // (e.g. the server provider exposes "huggingface:qwen-image-edit").
+  const idx = value.indexOf(":");
+  const provider = idx > 0 ? value.slice(0, idx) : "";
+  const model = idx > 0 ? value.slice(idx + 1) : "";
   if (provider && model) {
     useConfigStore.getState().setLiveModelConfig({ provider, model });
   }
@@ -92,7 +100,11 @@ export const getTextModelConfig = (): { provider: string; model: string } => {
 };
 
 export const saveTextModelConfig = (value: string) => {
-  const [provider, model] = value.split(":");
+  // Split on the FIRST colon only: model ids may themselves contain ':'
+  // (e.g. the server provider exposes "huggingface:qwen-image-edit").
+  const idx = value.indexOf(":");
+  const provider = idx > 0 ? value.slice(0, idx) : "";
+  const model = idx > 0 ? value.slice(idx + 1) : "";
   if (provider && model) {
     useConfigStore.getState().setTextModelConfig({ provider, model });
   }
@@ -106,7 +118,11 @@ export const getUpscalerModelConfig = (): {
 };
 
 export const saveUpscalerModelConfig = (value: string) => {
-  const [provider, model] = value.split(":");
+  // Split on the FIRST colon only: model ids may themselves contain ':'
+  // (e.g. the server provider exposes "huggingface:qwen-image-edit").
+  const idx = value.indexOf(":");
+  const provider = idx > 0 ? value.slice(0, idx) : "";
+  const model = idx > 0 ? value.slice(idx + 1) : "";
   if (provider && model) {
     useConfigStore.getState().setUpscalerModelConfig({ provider, model });
   }

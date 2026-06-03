@@ -166,16 +166,16 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         <div className="pointer-events-auto flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <button
             onClick={handleCancelUpscale}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-white/80 hover:bg-white/10 hover:text-white transition-all shadow-xl hover:shadow-red-900/10 hover:border-red-500/30"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface/90 backdrop-blur-md border border-stroke text-ink-secondary hover:bg-fill hover:text-ink transition-all shadow-flyout hover:border-red-500/30"
           >
             <LucideX className="w-5 h-5 text-red-400" />
             <span className="font-medium text-sm">{t.discard}</span>
           </button>
           <button
             onClick={handleApplyUpscale}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-white/80 hover:bg-white/10 hover:text-white transition-all shadow-xl hover:shadow-purple-900/10 hover:border-purple-500/30"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface/90 backdrop-blur-md border border-stroke text-ink-secondary hover:bg-fill hover:text-ink transition-all shadow-flyout hover:border-accent/30"
           >
-            <LucideCheck className="w-5 h-5 text-purple-400" />
+            <LucideCheck className="w-5 h-5 text-accent" />
             <span className="font-medium text-sm">{t.apply}</span>
           </button>
         </div>
@@ -184,12 +184,12 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         <div className="relative pointer-events-auto">
           {/* Info Popover (Positioned relative to toolbar) */}
           {showInfo && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-[90vw] md:w-[400px] bg-[#1A1625]/95 backdrop-blur-md border border-white/10 rounded-xl p-5 shadow-2xl text-sm text-white/80 animate-in slide-in-from-bottom-2 fade-in duration-200 z-50">
-              <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
-                <h4 className="font-medium text-white">{t.imageDetails}</h4>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-[90vw] md:w-[400px] bg-surface backdrop-blur-md border border-stroke rounded-xl p-5 shadow-dialog text-sm text-ink-secondary animate-in slide-in-from-bottom-2 fade-in duration-200 z-50">
+              <div className="flex items-center justify-between mb-3 border-b border-stroke pb-2">
+                <h4 className="font-medium text-ink">{t.imageDetails}</h4>
                 <button
                   onClick={() => setShowInfo(false)}
-                  className="text-white/40 hover:text-white"
+                  className="text-ink-tertiary hover:text-ink"
                 >
                   <LucideX className="w-4 h-4" />
                 </button>
@@ -197,22 +197,22 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="block text-white/40 text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                    <span className="block text-ink-tertiary text-[10px] uppercase tracking-wider font-semibold mb-0.5">
                       {t.provider}
                     </span>
                     <p
-                      className="text-white/90 capitalize truncate"
+                      className="text-ink/90 capitalize truncate"
                       title={getProviderLabel(currentImage.provider)}
                     >
                       {getProviderLabel(currentImage.provider)}
                     </p>
                   </div>
                   <div>
-                    <span className="block text-white/40 text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                    <span className="block text-ink-tertiary text-[10px] uppercase tracking-wider font-semibold mb-0.5">
                       {t.model}
                     </span>
                     <p
-                      className="text-white/90 truncate"
+                      className="text-ink/90 truncate"
                       title={getModelLabel(
                         currentImage.model,
                         currentImage.provider,
@@ -224,10 +224,10 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="block text-white/40 text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                    <span className="block text-ink-tertiary text-[10px] uppercase tracking-wider font-semibold mb-0.5">
                       {t.dimensions}
                     </span>
-                    <p className="text-white/90">
+                    <p className="text-ink/90">
                       {imageDimensions
                         ? `${imageDimensions.width} x ${imageDimensions.height}`
                         : currentImage.aspectRatio}
@@ -236,7 +236,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                         imageDimensions &&
                         ` (${currentImage.aspectRatio})`}
                       {currentImage.isUpscaled && (
-                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 font-bold">
+                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] bg-accent-light text-accent font-bold">
                           HD
                         </span>
                       )}
@@ -244,11 +244,11 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                   </div>
                   {currentImage.duration !== undefined && (
                     <div>
-                      <span className="block text-white/40 text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                      <span className="block text-ink-tertiary text-[10px] uppercase tracking-wider font-semibold mb-0.5">
                         {t.duration}
                       </span>
-                      <p className="font-mono text-white/90 flex items-center gap-1">
-                        <Timer className="w-3 h-3 text-purple-400" />
+                      <p className="font-mono text-ink/90 flex items-center gap-1">
+                        <Timer className="w-3 h-3 text-accent" />
                         {currentImage.duration.toFixed(1)}s
                       </p>
                     </div>
@@ -257,30 +257,30 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                   {currentImage.seed !== undefined && (
                     <div>
-                      <span className="block text-white/40 text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                      <span className="block text-ink-tertiary text-[10px] uppercase tracking-wider font-semibold mb-0.5">
                         {t.seed}
                       </span>
-                      <p className="font-mono text-white/90">
+                      <p className="font-mono text-ink/90">
                         {currentImage.seed}
                       </p>
                     </div>
                   )}
                   {currentImage.guidanceScale !== undefined && (
                     <div>
-                      <span className="block text-white/40 text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                      <span className="block text-ink-tertiary text-[10px] uppercase tracking-wider font-semibold mb-0.5">
                         {t.guidanceScale}
                       </span>
-                      <p className="font-mono text-white/90">
+                      <p className="font-mono text-ink/90">
                         {currentImage.guidanceScale.toFixed(1)}
                       </p>
                     </div>
                   )}
                   {currentImage.steps !== undefined && (
                     <div>
-                      <span className="block text-white/40 text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                      <span className="block text-ink-tertiary text-[10px] uppercase tracking-wider font-semibold mb-0.5">
                         {t.steps}
                       </span>
-                      <p className="font-mono text-white/90">
+                      <p className="font-mono text-ink/90">
                         {currentImage.steps}
                       </p>
                     </div>
@@ -288,12 +288,12 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="block text-white/40 text-[10px] uppercase tracking-wider font-semibold">
+                    <span className="block text-ink-tertiary text-[10px] uppercase tracking-wider font-semibold">
                       {t.prompt}
                     </span>
                     <button
                       onClick={handleCopyPrompt}
-                      className="flex items-center gap-1.5 text-[10px] font-medium text-purple-400 hover:text-purple-300 transition-colors"
+                      className="flex items-center gap-1.5 text-[10px] font-medium text-accent hover:text-accent-hover transition-colors"
                     >
                       {copiedPrompt ? (
                         <>
@@ -308,8 +308,8 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                       )}
                     </button>
                   </div>
-                  <div className="max-h-24 overflow-y-auto custom-scrollbar p-2 bg-black/20 rounded-lg border border-white/5">
-                    <p className="text-xs leading-relaxed text-white/70 italic select-text">
+                  <div className="max-h-24 overflow-y-auto custom-scrollbar p-2 bg-fill-subtle rounded-lg border border-stroke-subtle">
+                    <p className="text-xs leading-relaxed text-ink-secondary italic select-text">
                       {currentImage.prompt}
                     </p>
                   </div>
@@ -318,18 +318,18 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
             </div>
           )}
 
-          <div className="max-w-[90vw] overflow-x-auto md:overflow-visible scrollbar-hide rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 shadow-2xl transition-opacity duration-300 opacity-100 md:opacity-0 md:group-hover:opacity-100">
+          <div className="max-w-[90vw] overflow-x-auto md:overflow-visible scrollbar-hide rounded-2xl bg-surface/90 backdrop-blur-md border border-stroke shadow-flyout transition-opacity duration-300 opacity-100 md:opacity-0 md:group-hover:opacity-100">
             <div className="flex items-center gap-1 p-1.5 min-w-max">
               <Tooltip content={t.details}>
                 <button
                   onClick={() => setShowInfo(!showInfo)}
-                  className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${showInfo ? "bg-purple-600 text-white shadow-lg" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+                  className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${showInfo ? "bg-accent text-on-accent shadow-card" : "text-ink-secondary hover:text-ink hover:bg-fill"}`}
                 >
                   <LucideInfo className="w-5 h-5" />
                 </button>
               </Tooltip>
 
-              <div className="w-px h-5 bg-white/10 mx-1"></div>
+              <div className="w-px h-5 bg-stroke mx-1"></div>
 
               {/* Live Button for Gitee or Hugging Face */}
               {showLiveButton && (
@@ -348,7 +348,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                       disabled={isLiveDisabled}
                       className={`
                                                 flex items-center justify-center w-10 h-10 rounded-xl transition-all
-                                                ${isLiveMode ? "text-red-400 bg-red-500/10" : "text-white/70 hover:text-red-400 hover:bg-white/10"}
+                                                ${isLiveMode ? "text-red-500 bg-red-500/10" : "text-ink-secondary hover:text-red-500 hover:bg-fill"}
                                                 ${isBusy ? "opacity-50 cursor-not-allowed" : ""}
                                                 ${isLiveMode && !isBusy ? "cursor-default" : ""}
                                                 ${!isLiveMode && !isBusy ? "cursor-pointer" : ""}
@@ -361,7 +361,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                       )}
                     </button>
                   </Tooltip>
-                  <div className="w-px h-5 bg-white/10 mx-1"></div>
+                  <div className="w-px h-5 bg-stroke mx-1"></div>
                 </>
               )}
 
@@ -372,23 +372,23 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                     <button
                       onClick={handleUpscale}
                       disabled={isUpscaling || currentImage.isUpscaled}
-                      className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${currentImage.isUpscaled ? "text-purple-400 bg-purple-500/10" : "text-white/70 hover:text-purple-400 hover:bg-white/10"} disabled:opacity-50 disabled:cursor-not-allowed`}
+                      className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${currentImage.isUpscaled ? "text-accent bg-accent-light" : "text-ink-secondary hover:text-accent hover:bg-fill"} disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {isUpscaling ? (
-                        <LucideLoader2 className="w-5 h-5 animate-spin text-purple-400" />
+                        <LucideLoader2 className="w-5 h-5 animate-spin text-accent" />
                       ) : (
                         <CustomIcon4x className="w-5 h-5 transition-colors duration-300" />
                       )}
                     </button>
                   </Tooltip>
-                  <div className="w-px h-5 bg-white/10 mx-1"></div>
+                  <div className="w-px h-5 bg-stroke mx-1"></div>
                 </>
               )}
 
               <Tooltip content={t.toggleBlur}>
                 <button
                   onClick={handleToggleBlur}
-                  className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${currentImage.isBlurred ? "text-purple-400 bg-white/10" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+                  className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${currentImage.isBlurred ? "text-accent bg-fill" : "text-ink-secondary hover:text-ink hover:bg-fill"}`}
                 >
                   {currentImage.isBlurred ? (
                     <LucideEyeOff className="w-5 h-5" />
@@ -398,7 +398,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                 </button>
               </Tooltip>
 
-              <div className="w-px h-5 bg-white/10 mx-1"></div>
+              <div className="w-px h-5 bg-stroke mx-1"></div>
 
               {/* Upload Button */}
               {showUploadButton && (
@@ -422,7 +422,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                                                     ? "text-green-400 bg-green-500/10 cursor-not-allowed"
                                                     : isUploaded
                                                       ? "text-green-400 bg-green-500/20 border border-green-500/30 shadow-[0_0_10px_-3px_rgba(74,222,128,0.3)] hover:bg-green-500/30"
-                                                      : "text-white/70 hover:text-green-400 hover:bg-white/10"
+                                                      : "text-ink-secondary hover:text-green-500 hover:bg-fill"
                                                 }
                                             `}
                     >
@@ -433,7 +433,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                       )}
                     </button>
                   </Tooltip>
-                  <div className="w-px h-5 bg-white/10 mx-1"></div>
+                  <div className="w-px h-5 bg-stroke mx-1"></div>
                 </>
               )}
 
@@ -441,7 +441,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                 <button
                   onClick={handleDownload}
                   disabled={isDownloading}
-                  className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${isDownloading ? "text-blue-400 bg-blue-500/10 cursor-not-allowed" : "text-white/70 hover:text-blue-400 hover:bg-white/10"}`}
+                  className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${isDownloading ? "text-blue-400 bg-blue-500/10 cursor-not-allowed" : "text-ink-secondary hover:text-blue-500 hover:bg-fill"}`}
                 >
                   {isDownloading ? (
                     <LucideLoader2 className="w-5 h-5 animate-spin" />
@@ -451,12 +451,12 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
                 </button>
               </Tooltip>
 
-              <div className="w-px h-5 bg-white/10 mx-1"></div>
+              <div className="w-px h-5 bg-stroke mx-1"></div>
 
               <Tooltip content={t.delete}>
                 <button
                   onClick={handleDelete}
-                  className="flex items-center justify-center w-10 h-10 rounded-xl text-white/70 hover:text-red-400 transition-all hover:bg-red-500/10"
+                  className="flex items-center justify-center w-10 h-10 rounded-xl text-ink-secondary hover:text-red-400 transition-all hover:bg-red-500/10"
                 >
                   <LucideTrash2 className="w-5 h-5" />
                 </button>

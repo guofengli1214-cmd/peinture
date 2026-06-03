@@ -6,6 +6,14 @@ export default defineConfig({
     server: {
       port: 3000,
       host: '0.0.0.0',
+      // Dev only: forward API calls to the Node backend. In production nginx
+      // reverse-proxies /api to the api container instead.
+      proxy: {
+        '/api': {
+          target: process.env.VITE_API_PROXY || 'http://localhost:3001',
+          changeOrigin: true,
+        },
+      },
     },
     base: './',
     plugins: [react()],

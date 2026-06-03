@@ -46,7 +46,7 @@ const TimerDisplay = () => {
     }, 100);
     return () => clearInterval(interval);
   }, []);
-  return <p className="mt-2 font-mono text-purple-300 text-lg">{elapsed.toFixed(1)}s</p>;
+  return <p className="mt-2 font-mono text-accent text-lg">{elapsed.toFixed(1)}s</p>;
 };
 
 interface ImageEditorViewProps {
@@ -66,7 +66,7 @@ const ShortcutRow = ({
   keys: React.ReactNode[];
 }) => (
   <div className="flex items-center justify-between text-sm group">
-    <span className="text-white/60">{label}</span>
+    <span className="text-ink-secondary">{label}</span>
     <div className="flex gap-1 items-center">
       {keys.map((k, i) =>
         typeof k === "string" &&
@@ -92,12 +92,12 @@ const ShortcutRow = ({
         ].includes(k) ? (
           <span
             key={i}
-            className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-xs"
+            className="px-1.5 py-0.5 rounded bg-fill font-mono text-xs"
           >
             {k}
           </span>
         ) : (
-          <span key={i} className="text-white/40 text-xs">
+          <span key={i} className="text-ink-tertiary text-xs">
             {k}
           </span>
         ),
@@ -487,21 +487,21 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
       <div
         ref={containerRef}
         onContextMenu={handleContextMenu}
-        className="flex-1 w-full relative overflow-hidden bg-[#0D0B14] cursor-crosshair rounded-none border-none md:rounded-xl md:border md:border-white/5"
+        className="flex-1 w-full relative overflow-hidden bg-canvas cursor-crosshair rounded-none border-none md:rounded-xl md:border md:border-stroke"
         style={{
-          backgroundImage: "radial-gradient(circle, #333 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle, #d0d5dd 1px, transparent 1px)",
           backgroundSize: "20px 20px",
         }}
       >
         {isGenerating && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-canvas/70 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="relative">
-              <div className="h-24 w-24 rounded-full border-4 border-white/10 border-t-purple-500 animate-spin"></div>
+              <div className="h-24 w-24 rounded-full border-4 border-stroke border-t-accent animate-spin"></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <Paintbrush className="text-purple-400 animate-pulse w-8 h-8" />
+                <Paintbrush className="text-accent animate-pulse w-8 h-8" />
               </div>
             </div>
-            <p className="mt-8 text-white/80 font-medium animate-pulse text-lg">
+            <p className="mt-8 text-ink-secondary font-medium animate-pulse text-lg">
               {t.dreaming}
             </p>
             <TimerDisplay />
@@ -514,8 +514,8 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
               <label
                 className={`cursor-pointer group flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl transition-all duration-300 animate-in zoom-in-95 ${
                   isDragOver
-                    ? "border-purple-500 bg-purple-500/10 scale-105"
-                    : "border-white/20 bg-white/[0.02] hover:bg-white/[0.05] hover:border-purple-500/50"
+                    ? "border-accent bg-accent-light scale-105"
+                    : "border-stroke bg-fill-subtle hover:bg-fill hover:border-accent/50"
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -528,19 +528,19 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                   className="hidden"
                   onChange={handleImageUpload}
                 />
-                <div className="mb-6 p-5 rounded-full bg-white/5 group-hover:bg-purple-500/20 group-hover:scale-110 transition-all duration-300 shadow-lg">
+                <div className="mb-6 p-5 rounded-full bg-fill group-hover:bg-accent-light group-hover:scale-110 transition-all duration-300 shadow-lg">
                   <Upload
-                    className={`w-10 h-10 transition-colors ${isDragOver ? "text-purple-400" : "text-white/40 group-hover:text-purple-400"}`}
+                    className={`w-10 h-10 transition-colors ${isDragOver ? "text-accent" : "text-ink-tertiary group-hover:text-accent"}`}
                   />
                 </div>
-                <p className="text-white/60 font-medium text-lg group-hover:text-white/90 transition-colors">
+                <p className="text-ink-secondary font-medium text-lg group-hover:text-ink transition-colors">
                   {t.upload_image_cta}
                 </p>
               </label>
               <div className="flex gap-4">
                 <button
                   onClick={() => setShowHistoryModal(true)}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 rounded-xl transition-all shadow-lg active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-surface hover:bg-fill text-ink-secondary hover:text-ink border border-stroke rounded-xl transition-all shadow-card active:scale-95"
                 >
                   <History className="w-4 h-4" />
                   <span className="font-medium text-sm">
@@ -550,7 +550,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                 {isStorageEnabled && (
                   <button
                     onClick={() => setShowGalleryModal(true)}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 rounded-xl transition-all shadow-lg active:scale-95"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-surface hover:bg-fill text-ink-secondary hover:text-ink border border-stroke rounded-xl transition-all shadow-card active:scale-95"
                   >
                     <Cloud className="w-4 h-4" />
                     <span className="font-medium text-sm">
@@ -596,7 +596,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
         </div>
 
         {generatedResult && image && (
-          <div className="absolute inset-0 z-50 bg-[#0D0B14] animate-in fade-in duration-300">
+          <div className="absolute inset-0 z-50 bg-canvas animate-in fade-in duration-300">
             <div className="relative w-full h-full overflow-hidden">
               <ImageComparison
                 beforeImage={image.src}
@@ -606,24 +606,24 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                 labelAfter={t.compare_edited}
               />
               <div className="absolute bottom-6 inset-x-0 flex justify-center pointer-events-none z-40">
-                <div className="pointer-events-auto max-w-[90%] overflow-x-auto scrollbar-hide rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+                <div className="pointer-events-auto max-w-[90%] overflow-x-auto scrollbar-hide rounded-2xl bg-surface/90 backdrop-blur-md border border-stroke shadow-flyout animate-in slide-in-from-bottom-4 duration-300">
                   <div className="flex items-center gap-1 p-1.5 min-w-max">
                     <Tooltip content={t.re_edit}>
                       <button
                         onClick={() => setGeneratedResult(null)}
-                        className="flex items-center justify-center w-10 h-10 rounded-xl text-white/70 hover:text-purple-400 hover:bg-white/10 transition-all"
+                        className="flex items-center justify-center w-10 h-10 rounded-xl text-ink-secondary hover:text-accent hover:bg-fill transition-all"
                       >
                         <RotateCcw className="w-5 h-5" />
                       </button>
                     </Tooltip>
-                    <div className="w-px h-5 bg-white/10 mx-1"></div>
+                    <div className="w-px h-5 bg-stroke mx-1"></div>
                     {isStorageEnabled && provider !== "modelscope" && (
                       <>
                         <Tooltip content={isUploading ? t.uploading : t.upload}>
                           <button
                             onClick={() => onCloudUpload(isSourceNSFW)}
                             disabled={isUploading}
-                            className="flex items-center justify-center w-10 h-10 rounded-xl text-white/70 hover:text-green-400 hover:bg-white/10 transition-all"
+                            className="flex items-center justify-center w-10 h-10 rounded-xl text-ink-secondary hover:text-green-500 hover:bg-fill transition-all"
                           >
                             {isUploading ? (
                               <Loader2 className="w-5 h-5 animate-spin" />
@@ -632,7 +632,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                             )}
                           </button>
                         </Tooltip>
-                        <div className="w-px h-5 bg-white/10 mx-1"></div>
+                        <div className="w-px h-5 bg-stroke mx-1"></div>
                       </>
                     )}
                     <Tooltip content={t.menu_download}>
@@ -641,7 +641,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                           handleDownloadResult(generatedResult, isSourceNSFW)
                         }
                         disabled={isDownloading}
-                        className="flex items-center justify-center w-10 h-10 rounded-xl text-white/70 hover:text-blue-400 hover:bg-white/10 transition-all"
+                        className="flex items-center justify-center w-10 h-10 rounded-xl text-ink-secondary hover:text-blue-500 hover:bg-fill transition-all"
                       >
                         {isDownloading ? (
                           <Loader2 className="w-5 h-5 animate-spin" />
@@ -650,11 +650,11 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                         )}
                       </button>
                     </Tooltip>
-                    <div className="w-px h-5 bg-white/10 mx-1"></div>
+                    <div className="w-px h-5 bg-stroke mx-1"></div>
                     <Tooltip content={t.menu_exit}>
                       <button
                         onClick={() => setShowExitDialog(true)}
-                        className="flex items-center justify-center w-10 h-10 rounded-xl text-white/70 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                        className="flex items-center justify-center w-10 h-10 rounded-xl text-ink-secondary hover:text-red-500 hover:bg-red-500/10 transition-all"
                       >
                         <LogOut className="w-5 h-5" />
                       </button>
@@ -673,7 +673,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
               onClick={() => setContextMenu(null)}
             />
             <div
-              className="fixed z-50 min-w-[160px] bg-black/60 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl p-1 animate-in fade-in zoom-in-95 duration-150"
+              className="fixed z-50 min-w-[160px] bg-surface backdrop-blur-xl border border-stroke rounded-xl shadow-flyout p-1 animate-in fade-in zoom-in-95 duration-150"
               style={{ left: contextMenu.x, top: contextMenu.y }}
             >
               <button
@@ -681,26 +681,26 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                   setContextMenu(null);
                   fileInputRef.current?.click();
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 rounded-lg transition-colors text-left group"
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-ink hover:bg-fill rounded-lg transition-colors text-left group"
               >
-                <ImageIcon className="w-4 h-4 text-purple-400 group-hover:scale-110" />
+                <ImageIcon className="w-4 h-4 text-accent group-hover:scale-110" />
                 {t.menu_replace}
               </button>
               <button
                 onClick={centerView}
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 rounded-lg transition-colors text-left group"
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-ink hover:bg-fill rounded-lg transition-colors text-left group"
               >
                 <AlignCenter className="w-4 h-4 text-blue-400 group-hover:scale-110" />
                 {t.menu_center}
               </button>
               <button
                 onClick={handleDownloadExport}
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 rounded-lg transition-colors text-left group"
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-ink hover:bg-fill rounded-lg transition-colors text-left group"
               >
                 <Download className="w-4 h-4 text-green-400 group-hover:scale-110" />
                 {t.menu_download}
               </button>
-              <div className="h-px bg-white/10 my-1 mx-1" />
+              <div className="h-px bg-stroke my-1 mx-1" />
               <button
                 onClick={() => {
                   setContextMenu(null);
@@ -716,11 +716,11 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
         )}
 
         {image && (
-          <div className="absolute bottom-6 left-6 hidden md:flex items-center gap-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-full text-white/70 shadow-lg z-20">
+          <div className="absolute bottom-6 left-6 hidden md:flex items-center gap-1 bg-surface/90 backdrop-blur-md border border-stroke rounded-full text-ink-secondary shadow-card z-20">
             <Tooltip content={t.sc_zoom_out}>
               <button
                 onClick={zoomOut}
-                className="p-2 hover:bg-white/10 hover:text-white transition-colors rounded-s-full"
+                className="p-2 hover:bg-fill hover:text-ink transition-colors rounded-s-full"
               >
                 <Minus className="w-4 h-4" />
               </button>
@@ -728,7 +728,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
             <Tooltip content={t.sc_reset_view}>
               <button
                 onClick={zoomReset}
-                className="p-2 text-xs font-mono min-w-[3rem] text-center outline-0 select-none hover:bg-white/10 hover:text-white transition-colors"
+                className="p-2 text-xs font-mono min-w-[3rem] text-center outline-0 select-none hover:bg-fill hover:text-ink transition-colors"
               >
                 {Math.round(scale * 100)}%
               </button>
@@ -736,7 +736,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
             <Tooltip content={t.sc_zoom_in}>
               <button
                 onClick={zoomIn}
-                className="p-2 hover:bg-white/10 hover:text-white transition-colors rounded-e-full"
+                className="p-2 hover:bg-fill hover:text-ink transition-colors rounded-e-full"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -748,7 +748,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
           <Tooltip content={t.shortcuts_title} position="left">
             <button
               onClick={() => setShowShortcuts(true)}
-              className="p-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors shadow-lg"
+              className="p-2 bg-surface/90 backdrop-blur-md border border-stroke rounded-full text-ink-tertiary hover:text-ink hover:bg-fill transition-colors shadow-card"
             >
               <Keyboard className="w-5 h-5" />
             </button>
@@ -766,16 +766,16 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
       </div>
 
       {showExitDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#1A1625] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-white mb-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface border border-stroke rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-ink mb-2">
               {t.exit_dialog_title}
             </h3>
-            <p className="text-white/60 text-sm mb-6">{t.exit_dialog_desc}</p>
+            <p className="text-ink-secondary text-sm mb-6">{t.exit_dialog_desc}</p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowExitDialog(false)}
-                className="px-4 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                className="px-4 py-2 rounded-lg text-ink-secondary hover:text-ink hover:bg-fill-subtle transition-colors text-sm font-medium"
               >
                 {t.cancel}
               </button>
@@ -792,28 +792,28 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
 
       {showHistoryModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setShowHistoryModal(false)}
         >
           <div
-            className="bg-[#1A1625] border border-white/10 rounded-2xl p-0 max-w-3xl w-[90vw] h-[80vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden"
+            className="bg-surface border border-stroke rounded-2xl p-0 max-w-3xl w-[90vw] h-[80vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <History className="w-5 h-5 text-purple-400" />
+            <div className="flex items-center justify-between p-5 border-b border-stroke bg-fill-subtle">
+              <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+                <History className="w-5 h-5 text-accent" />
                 {t.history_modal_title}
               </h3>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="text-white/40 hover:text-white transition-colors"
+                className="text-ink-tertiary hover:text-ink transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar bg-[#0D0B14]">
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar bg-canvas">
               {history.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-white/30 space-y-4">
+                <div className="flex flex-col items-center justify-center h-full text-ink-tertiary space-y-4">
                   <Sparkles className="w-12 h-12 opacity-50" />
                   <p>{t.no_history_images}</p>
                 </div>
@@ -827,7 +827,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                         loadEditorImage(img.url);
                         setShowHistoryModal(false);
                       }}
-                      className="group relative aspect-square rounded-xl overflow-hidden border border-white/10 hover:border-purple-500 transition-all hover:ring-4 hover:ring-purple-500/20 focus:outline-0"
+                      className="group relative aspect-square rounded-xl overflow-hidden border border-stroke hover:border-accent transition-all hover:ring-4 hover:ring-accent/20 focus:outline-0"
                     >
                       <img
                         src={img.url}
@@ -857,32 +857,32 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
 
       {showGalleryModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setShowGalleryModal(false)}
         >
           <div
-            className="bg-[#1A1625] border border-white/10 rounded-2xl p-0 max-w-3xl w-[90vw] h-[80vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden"
+            className="bg-surface border border-stroke rounded-2xl p-0 max-w-3xl w-[90vw] h-[80vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Cloud className="w-5 h-5 text-purple-400" />
+            <div className="flex items-center justify-between p-5 border-b border-stroke bg-fill-subtle">
+              <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+                <Cloud className="w-5 h-5 text-accent" />
                 {t.gallery_modal_title}
               </h3>
               <button
                 onClick={() => setShowGalleryModal(false)}
-                className="text-white/40 hover:text-white transition-colors"
+                className="text-ink-tertiary hover:text-ink transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar bg-[#0D0B14]">
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar bg-canvas">
               {galleryLoading ? (
-                <div className="flex flex-col items-center justify-center h-full text-white/30 space-y-4">
+                <div className="flex flex-col items-center justify-center h-full text-ink-tertiary space-y-4">
                   <Loader2 className="w-10 h-10 animate-spin" />
                 </div>
               ) : galleryFiles.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-white/30 space-y-4">
+                <div className="flex flex-col items-center justify-center h-full text-ink-tertiary space-y-4">
                   <CloudUpload className="w-12 h-12 opacity-50" />
                   <p>{t.no_gallery_images}</p>
                 </div>
@@ -899,7 +899,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                           );
                           setShowGalleryModal(false);
                         }}
-                        className="group relative aspect-square rounded-xl overflow-hidden border border-white/10 hover:border-purple-500 transition-all hover:ring-4 hover:ring-purple-500/20 focus:outline-0 bg-white/5"
+                        className="group relative aspect-square rounded-xl overflow-hidden border border-stroke hover:border-accent transition-all hover:ring-4 hover:ring-accent/20 focus:outline-0 bg-fill-subtle"
                       >
                         <img
                           src={galleryLocalUrls[file.key] || file.url}
@@ -914,7 +914,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                     <div className="mt-6 flex justify-center">
                       <button
                         onClick={() => setGalleryLimit((prev) => prev + 20)}
-                        className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white/80 rounded-lg text-sm font-medium transition-colors"
+                        className="px-4 py-2 bg-fill hover:bg-fill-strong text-ink-secondary rounded-lg text-sm font-medium transition-colors"
                       >
                         {t.load_more}
                       </button>
@@ -929,21 +929,21 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
 
       {showShortcuts && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setShowShortcuts(false)}
         >
           <div
-            className="bg-[#1A1625] border border-white/10 rounded-2xl p-4 max-w-xl w-full shadow-2xl animate-in zoom-in-95 duration-200"
+            className="bg-surface border border-stroke rounded-2xl p-4 max-w-xl w-full shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-6 border-b border-white/10 pb-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Keyboard className="w-5 h-5 text-purple-400" />
+            <div className="flex items-center justify-between mb-6 border-b border-stroke pb-4">
+              <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+                <Keyboard className="w-5 h-5 text-accent" />
                 {t.shortcuts_title}
               </h3>
               <button
                 onClick={() => setShowShortcuts(false)}
-                className="text-white/40 hover:text-white transition-colors"
+                className="text-ink-tertiary hover:text-ink transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

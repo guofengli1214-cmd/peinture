@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useSettingsStore } from "../store/settingsStore";
 import { useUIStore, useSetCurrentImage } from "../store/uiStore";
@@ -16,7 +16,6 @@ import {
   getServiceMode,
   getCustomProviders,
   addCustomProvider,
-  generateUUID,
   fetchBlob,
 } from "../services/utils";
 import { getDefaultModelParams } from "../services/modelUtils";
@@ -32,13 +31,15 @@ import {
   A4F_MODEL_OPTIONS,
 } from "../constants";
 
+/** Stable id for the synthetic "Server" custom provider (the backend proxy). */
+const SERVER_PROVIDER_ID = "server";
+
 export const useAppInit = () => {
   const { provider, setProvider, model, setModel, setSteps, setGuidanceScale } =
     useSettingsStore();
   const { setIsLiveMode, currentView } = useUIStore();
   const setCurrentImage = useSetCurrentImage();
   const setHistory = useDataStore((s) => s.setHistory);
-  const setServiceMode = useConfigStore((s) => s.setServiceMode);
   const _hasHydrated = useConfigStore((s) => s._hasHydrated);
 
   // Guard to prevent duplicate server mode initialization
@@ -47,11 +48,6 @@ export const useAppInit = () => {
   // Track previous provider/model to distinguish hydration from user-initiated changes.
   // On initial mount (null), we skip overwriting steps/guidance so persisted values survive.
   const prevProviderModelRef = useRef<{ provider: string; model: string } | null>(null);
-
-  // Password Modal State
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [accessPassword, setAccessPassword] = useState("");
-  const [passwordError, setPasswordError] = useState(false);
 
   // 1. Hydrate history from OPFS on mount
   useEffect(() => {
@@ -129,7 +125,7 @@ export const useAppInit = () => {
 
   // 2. Server Mode Initialization (run once after hydration)
   useEffect(() => {
-    if (showPasswordModal || !_hasHydrated || serverInitRef.current) return;
+    if (!_hasHydrated || serverInitRef.current) return;
 
     const initServiceMode = async () => {
       const mode = getServiceMode();
@@ -137,95 +133,42 @@ export const useAppInit = () => {
       if (mode === "server") {
         serverInitRef.current = true;
         try {
-          const customProviders = getCustomProviders();
-          const existingServer = customProviders.find(
-            (p) => p.name === "Server" && p.apiUrl === "/api",
-          );
-          const storedToken = existingServer?.token;
+          const models = await fetchServerModels();
 
-          const models = await fetchServerModels(storedToken);
-
+          // Stable id: config is no longer persisted in the browser, so the
+          // server provider is rebuilt each session. A fixed id keeps the
+          // (server-persisted) `provider` selection valid across reloads.
           const serverProvider: CustomProvider = {
-            id: existingServer ? existingServer.id : generateUUID(),
+            id: SERVER_PROVIDER_ID,
             name: "Server",
             apiUrl: "/api",
-            token: storedToken || "",
+            token: "",
             models,
             enabled: true,
           };
 
           addCustomProvider(serverProvider);
 
-          if (models.generate && models.generate.length > 0) {
-            const currentProviderIsCustom = customProviders.some(
-              (p) => p.id === provider,
-            );
-            if (
-              !provider ||
-              provider === "huggingface" ||
-              (currentProviderIsCustom && !existingServer)
-            ) {
-              setProvider(serverProvider.id);
-              setModel(models.generate[0].id);
-            }
+          // Point the active selection at the server provider unless it already
+          // is (preserves the user's persisted model choice on reload).
+          const generate = models.generate || [];
+          const currentProvider = useSettingsStore.getState().provider;
+          if (generate.length > 0 && currentProvider !== SERVER_PROVIDER_ID) {
+            setProvider(SERVER_PROVIDER_ID);
+            setModel(generate[0].id);
           }
-        } catch (e: any) {
+        } catch (e) {
           serverInitRef.current = false; // Allow retry on error
-          if (e.message === "401") {
-            setShowPasswordModal(true);
-          } else {
-            console.error("Failed to init server mode", e);
-          }
+          console.error("Failed to init server mode", e);
         }
       }
     };
 
     initServiceMode();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [_hasHydrated, showPasswordModal]);
+  }, [_hasHydrated]);
 
-  // 3. Password Handlers
-  const handlePasswordSubmit = async () => {
-    setPasswordError(false);
-    try {
-      const models = await fetchServerModels(accessPassword);
-
-      const customProviders = getCustomProviders();
-      const existing = customProviders.find(
-        (p) => p.name === "Server" && p.apiUrl === "/api",
-      );
-
-      const serverProvider: CustomProvider = {
-        id: existing ? existing.id : generateUUID(),
-        name: "Server",
-        apiUrl: "/api",
-        token: accessPassword,
-        models,
-        enabled: true,
-      };
-
-      addCustomProvider(serverProvider);
-      setServiceMode("server"); // Use Store Action
-
-      if (models.generate && models.generate.length > 0) {
-        setProvider(serverProvider.id);
-        setModel(models.generate[0].id);
-      }
-
-      setShowPasswordModal(false);
-    } catch {
-      setPasswordError(true);
-    }
-  };
-
-  const handleSwitchToLocal = () => {
-    setServiceMode("local"); // Use Store Action
-    setShowPasswordModal(false);
-    setProvider("huggingface");
-    setModel(HF_MODEL_OPTIONS[0].value);
-  };
-
-  // 4. Polling for Video Tasks
+  // 3. Polling for Video Tasks
   useEffect(() => {
     let isMounted = true;
     let timeoutId: any;
@@ -396,7 +339,7 @@ export const useAppInit = () => {
     };
   }, [setCurrentImage, setHistory, setIsLiveMode]);
 
-  // 5. Model/Steps Initialization on View Change
+  // 4. Model/Steps Initialization on View Change
   useEffect(() => {
     if (currentView === "creation") {
       let options: { value: string; label: string }[] = [];
@@ -425,7 +368,7 @@ export const useAppInit = () => {
     }
   }, [currentView, provider, model, setModel]);
 
-  // 6. Update steps/guidance when provider/model changes (but NOT on initial hydration)
+  // 5. Update steps/guidance when provider/model changes (but NOT on initial hydration)
   useEffect(() => {
     const prev = prevProviderModelRef.current;
 
@@ -451,13 +394,4 @@ export const useAppInit = () => {
       setGuidanceScale(defaultGs);
     }
   }, [provider, model, setSteps, setGuidanceScale]);
-
-  return {
-    showPasswordModal,
-    accessPassword,
-    passwordError,
-    setAccessPassword,
-    handlePasswordSubmit,
-    handleSwitchToLocal,
-  };
 };

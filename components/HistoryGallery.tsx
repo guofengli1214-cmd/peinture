@@ -67,7 +67,7 @@ export const HistoryGallery: React.FC<HistoryGalleryProps> = ({ onSelect }) => {
         <button
           onClick={() => scroll("left")}
           disabled={!canScrollLeft}
-          className="flex-shrink-0 flex items-center justify-center size-10 rounded-full bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+          className="flex-shrink-0 flex items-center justify-center size-10 rounded-full bg-fill hover:bg-fill-strong text-ink-secondary hover:text-ink transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
           aria-label="Scroll left"
         >
           <ChevronLeft className="w-6 h-6" />
@@ -88,7 +88,7 @@ export const HistoryGallery: React.FC<HistoryGalleryProps> = ({ onSelect }) => {
                 onClick={() => onSelect(img)}
                 className={`
                     relative group flex-shrink-0 h-24 w-24 rounded-lg overflow-hidden cursor-pointer transition-all snap-start select-none
-                    ${selectedId === img.id ? "ring-2 ring-purple-400 ring-offset-2 ring-offset-[#0D0B14]" : "ring-2 ring-transparent hover:ring-white/50"}
+                    ${selectedId === img.id ? "ring-2 ring-accent ring-offset-2 ring-offset-canvas" : "ring-2 ring-transparent hover:ring-accent/40"}
                 `}
               >
                 {isOpfsHydrated ? (
@@ -105,15 +105,15 @@ export const HistoryGallery: React.FC<HistoryGalleryProps> = ({ onSelect }) => {
 
                 {/* Live Video Indicator */}
                 {img.videoUrl && (
-                  <div className="absolute top-1 right-1 bg-black/60 rounded-full p-1 border border-white/20">
-                    <Film className="w-3 h-3 text-white" />
+                  <div className="absolute top-1 right-1 bg-surface/85 rounded-full p-1 border border-stroke">
+                    <Film className="w-3 h-3 text-ink-secondary" />
                   </div>
                 )}
 
                 {/* Generating Loading Indicator */}
                 {img.videoStatus === "generating" && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <Loader2 className="w-6 h-6 text-white/80 animate-spin" />
+                  <div className="absolute inset-0 bg-canvas/60 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-accent animate-spin" />
                   </div>
                 )}
               </div>
@@ -124,7 +124,7 @@ export const HistoryGallery: React.FC<HistoryGalleryProps> = ({ onSelect }) => {
         <button
           onClick={() => scroll("right")}
           disabled={!canScrollRight}
-          className="flex-shrink-0 flex items-center justify-center size-10 rounded-full bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+          className="flex-shrink-0 flex items-center justify-center size-10 rounded-full bg-fill hover:bg-fill-strong text-ink-secondary hover:text-ink transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
           aria-label="Scroll right"
         >
           <ChevronRight className="w-6 h-6" />

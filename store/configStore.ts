@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
 import {
   ProviderId,
   ServiceMode,
@@ -14,7 +13,6 @@ import {
   DEFAULT_S3_CONFIG,
   DEFAULT_WEBDAV_CONFIG,
 } from "../services/storageService";
-import { createEncryptedStorage } from "../services/cryptoService";
 import { getUTCDatesString, getBeijingDateString } from "../services/utils";
 
 export const DEFAULT_SYSTEM_PROMPT = `I am a master AI image prompt engineering advisor, specializing in crafting prompts that yield cinematic, hyper-realistic, and deeply evocative visual narratives, optimized for advanced generative models.
@@ -62,6 +60,11 @@ export interface ConfigState {
 
   tokens: Record<ProviderId, string[]>;
   tokenStatus: Record<ProviderId, TokenStatus>;
+  /**
+   * Per-provider "a token is configured" flags, hydrated from the server.
+   * Raw tokens never reach the browser; the UI uses these for display only.
+   */
+  hasTokens: Record<ProviderId, boolean>;
 
   setServiceMode: (mode: ServiceMode) => void;
   setStorageType: (type: StorageType) => void;
@@ -91,11 +94,11 @@ export interface ConfigState {
   setHasHydrated: (v: boolean) => void;
 }
 
-export const useConfigStore = create<ConfigState>()(
-  persist(
-    (set) => ({
+// No persistence: secrets must never live in the browser, and the server is the
+// single source of truth. State is hydrated from GET /api/config after login.
+export const useConfigStore = create<ConfigState>()((set) => ({
       serviceMode:
-        (import.meta.env.VITE_SERVICE_MODE as ServiceMode) || "local",
+        (import.meta.env.VITE_SERVICE_MODE as ServiceMode) || "server",
       storageType: "opfs",
       s3Config: DEFAULT_S3_CONFIG,
       webdavConfig: DEFAULT_WEBDAV_CONFIG,
@@ -140,6 +143,14 @@ export const useConfigStore = create<ConfigState>()(
         a4f: { date: getUTCDatesString(), exhausted: {} },
         openai: { date: getUTCDatesString(), exhausted: {} },
         google: { date: getUTCDatesString(), exhausted: {} },
+      },
+      hasTokens: {
+        huggingface: false,
+        gitee: false,
+        modelscope: false,
+        a4f: false,
+        openai: false,
+        google: false,
       },
 
       setServiceMode: (serviceMode) => set({ serviceMode }),
@@ -235,27 +246,4 @@ export const useConfigStore = create<ConfigState>()(
       },
 
       setHasHydrated: (v) => set({ _hasHydrated: v }),
-    }),
-    {
-      name: "peinture_config_v1",
-      storage: createJSONStorage(() =>
-        createEncryptedStorage([
-          "tokens",
-          "s3Config",
-          "webdavConfig",
-          "customProviders",
-        ]),
-      ),
-      // Exclude _hasHydrated from persistence — it's runtime-only
-      partialize: (state: ConfigState) => {
-        const { _hasHydrated, ...rest } = state;
-        return rest;
-      },
-      onRehydrateStorage: () => {
-        return () => {
-          useConfigStore.setState({ _hasHydrated: true });
-        };
-      },
-    },
-  ),
-);
+}));

@@ -32,13 +32,13 @@ export const PromptTab: React.FC<PromptTabProps> = ({
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm font-medium text-white/80">
+          <label className="flex items-center gap-2 text-sm font-medium text-ink">
             <MessageSquare className="w-4 h-4 text-pink-400" />
             {t.systemPrompts}
           </label>
           <button
             onClick={handleRestoreDefault}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/50 hover:text-white bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-ink-tertiary hover:text-ink bg-fill-subtle hover:bg-fill transition-colors border border-transparent hover:border-stroke"
             title={t.restoreDefault}
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -50,19 +50,19 @@ export const PromptTab: React.FC<PromptTabProps> = ({
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             placeholder={t.promptContent}
-            className="w-full h-28 bg-white/[0.03] border border-white/10 rounded-xl p-4 text-sm text-white/80 placeholder:text-white/20 focus:outline-0 focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/50 hover:border-white/20 resize-none custom-scrollbar leading-relaxed font-mono transition-all duration-300 ease-out"
+            className="w-full h-28 fluent-field rounded-md p-4 text-sm text-ink placeholder:text-ink-placeholder focus:outline-none resize-none custom-scrollbar leading-relaxed font-mono transition-all duration-300 ease-out"
           />
         </div>
       </div>
       <div className="space-y-4">
         <div className="flex items-center justify-between pt-2">
-          <label className="flex items-center gap-2 text-sm font-medium text-white/80">
+          <label className="flex items-center gap-2 text-sm font-medium text-ink">
             <Languages className="w-4 h-4 text-blue-400" />
             {t.translationPrompt}
           </label>
           <button
             onClick={handleRestoreTranslationDefault}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/50 hover:text-white bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-ink-tertiary hover:text-ink bg-fill-subtle hover:bg-fill transition-colors border border-transparent hover:border-stroke"
             title={t.restoreDefault}
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -74,7 +74,7 @@ export const PromptTab: React.FC<PromptTabProps> = ({
             value={translationPrompt}
             onChange={(e) => setTranslationPrompt(e.target.value)}
             placeholder={t.promptContent}
-            className="w-full h-28 bg-white/[0.03] border border-white/10 rounded-xl p-4 text-sm text-white/80 placeholder:text-white/20 focus:outline-0 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 hover:border-white/20 resize-none custom-scrollbar leading-relaxed font-mono transition-all duration-300 ease-out"
+            className="w-full h-28 fluent-field rounded-md p-4 text-sm text-ink placeholder:text-ink-placeholder focus:outline-none resize-none custom-scrollbar leading-relaxed font-mono transition-all duration-300 ease-out"
           />
         </div>
       </div>

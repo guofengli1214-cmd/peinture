@@ -64,22 +64,29 @@ export const useImageActions = () => {
     if (!currentImage || isUpscaling) return;
     setIsUpscaling(true);
     try {
-      const config = getUpscalerModelConfig();
       let newUrl = "";
-      if (config.provider === "huggingface") {
+      const customProviders = getCustomProviders();
+      const serverProvider = customProviders.find((p) => p.apiUrl === "/api");
+      const config = getUpscalerModelConfig();
+
+      if (serverProvider?.models.upscaler && serverProvider.models.upscaler.length > 0) {
+        // Server mode: upscale through the backend proxy. Upload the image bytes,
+        // since the server can't fetch the browser's blob: URL.
+        const upModel =
+          config.provider === serverProvider.id
+            ? config.model
+            : serverProvider.models.upscaler[0].id;
+        const blob = await fetchBlob(currentImage.url);
+        const result = await upscaleImageCustom(serverProvider, upModel, blob);
+        newUrl = result.url;
+      } else if (config.provider === "huggingface") {
         const result = await upscaler(currentImage.url);
         newUrl = result.url;
       } else {
-        const customProviders = getCustomProviders();
-        const activeProvider = customProviders.find(
-          (p) => p.id === config.provider,
-        );
+        const activeProvider = customProviders.find((p) => p.id === config.provider);
         if (activeProvider) {
-          const result = await upscaleImageCustom(
-            activeProvider,
-            config.model,
-            currentImage.url,
-          );
+          const blob = await fetchBlob(currentImage.url);
+          const result = await upscaleImageCustom(activeProvider, config.model, blob);
           newUrl = result.url;
         } else {
           const result = await upscaler(currentImage.url);

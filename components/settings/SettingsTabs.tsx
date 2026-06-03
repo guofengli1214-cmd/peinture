@@ -58,7 +58,7 @@ export const SettingsTabs: React.FC<SettingsTabsProps> = ({
   };
 
   return (
-    <div className="relative border-b border-white/[0.06]">
+    <div className="relative border-b border-stroke-subtle">
       <div
         ref={tabsRef}
         onScroll={checkTabsScroll}
@@ -69,23 +69,23 @@ export const SettingsTabs: React.FC<SettingsTabsProps> = ({
             key={tab.id}
             data-tab-id={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`group relative py-4 text-sm font-medium transition-colors duration-300 flex items-center gap-2 flex-shrink-0 ${activeTab === tab.id ? "text-white" : "text-white/40 hover:text-white/80"}`}
+            className={`group relative py-4 text-sm font-medium transition-colors duration-300 flex items-center gap-2 flex-shrink-0 ${activeTab === tab.id ? "text-ink" : "text-ink-tertiary hover:text-ink-secondary"}`}
           >
             <tab.icon
-              className={`w-4 h-4 transition-colors duration-300 ${activeTab === tab.id ? "text-purple-400" : "text-current group-hover:text-purple-400/70"}`}
+              className={`w-4 h-4 transition-colors duration-300 ${activeTab === tab.id ? "text-accent" : "text-current group-hover:text-accent/70"}`}
             />
             {tab.label}
             <span
-              className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full shadow-[0_-2px_10px_rgba(168,85,247,0.1)] transition-all duration-300 ease-out origin-center ${activeTab === tab.id ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`}
+              className={`absolute bottom-0 left-0 w-full h-0.5 bg-accent rounded-full transition-all duration-300 ease-out origin-center ${activeTab === tab.id ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`}
             />
           </button>
         ))}
       </div>
-      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0D0B14] via-[#0D0B14]/80 to-transparent flex items-center justify-center pointer-events-none">
+      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-surface via-surface/80 to-transparent flex items-center justify-center pointer-events-none">
         <button
           onClick={handleScrollTabsRight}
           disabled={!canScrollTabs}
-          className={`pointer-events-auto p-1.5 rounded-full transition-all duration-300 ${canScrollTabs ? "text-white bg-white/10 hover:bg-white/20 shadow-lg" : "text-white/20"}`}
+          className={`pointer-events-auto p-1.5 rounded-full transition-all duration-300 ${canScrollTabs ? "text-ink bg-fill hover:bg-fill-strong shadow-card" : "text-ink-tertiary"}`}
         >
           <ChevronRight className="w-4 h-4" />
         </button>

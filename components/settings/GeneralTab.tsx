@@ -1,18 +1,15 @@
 import React, { useState } from "react";
 import {
   Languages,
-  Router,
   HardDrive,
   Trash2,
   AlertCircle,
 } from "lucide-react";
 import { useSettingsStore } from "../../store/settingsStore";
 import { translations } from "../../translations";
-import { ServiceMode, StorageType } from "../../types";
+import { StorageType } from "../../types";
 
 interface GeneralTabProps {
-  serviceMode: ServiceMode;
-  setServiceMode: (mode: ServiceMode) => void;
   storageType: StorageType;
   setStorageType: (type: StorageType) => void;
   onClearData: () => void;
@@ -20,8 +17,6 @@ interface GeneralTabProps {
 }
 
 export const GeneralTab: React.FC<GeneralTabProps> = ({
-  serviceMode,
-  setServiceMode,
   storageType,
   setStorageType,
   onClearData,
@@ -34,20 +29,20 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <label className="flex items-center gap-2 text-xs font-medium text-white/80 mb-2">
-          <Languages className="w-3.5 h-3.5 text-purple-400" />
+        <label className="flex items-center gap-2 text-xs font-medium text-ink mb-2">
+          <Languages className="w-3.5 h-3.5 text-accent" />
           {t.language}
         </label>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setLanguage("en")}
-            className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 border ${language === "en" ? "bg-purple-600/90 border-purple-500/50 text-white shadow-lg shadow-purple-900/20" : "bg-white/[0.03] border-white/10 text-white/60 hover:bg-white/[0.06] hover:text-white hover:border-white/20"}`}
+            className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 border ${language === "en" ? "bg-accent border-accent text-on-accent shadow-card" : "bg-fill-subtle border-stroke text-ink-secondary hover:bg-fill hover:text-ink hover:border-stroke"}`}
           >
             English
           </button>
           <button
             onClick={() => setLanguage("zh")}
-            className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 border ${language === "zh" ? "bg-purple-600/90 border-purple-500/50 text-white shadow-lg shadow-purple-900/20" : "bg-white/[0.03] border-white/10 text-white/60 hover:bg-white/[0.06] hover:text-white hover:border-white/20"}`}
+            className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 border ${language === "zh" ? "bg-accent border-accent text-on-accent shadow-card" : "bg-fill-subtle border-stroke text-ink-secondary hover:bg-fill hover:text-ink hover:border-stroke"}`}
           >
             中文
           </button>
@@ -55,29 +50,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
       </div>
 
       <div>
-        <label className="flex items-center gap-2 text-xs font-medium text-white/80 mb-2">
-          <Router className="w-3.5 h-3.5 text-blue-400" />
-          {t.service_mode}
-        </label>
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { id: "local", label: t.mode_local },
-            { id: "server", label: t.mode_server },
-            { id: "hydration", label: t.mode_hydration },
-          ].map((option) => (
-            <button
-              key={option.id}
-              onClick={() => setServiceMode(option.id as ServiceMode)}
-              className={`px-2 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 border truncate ${serviceMode === option.id ? "bg-blue-600/90 border-blue-500/50 text-white shadow-lg shadow-blue-900/20" : "bg-white/[0.03] border-white/10 text-white/60 hover:bg-white/[0.06] hover:text-white hover:border-white/20"}`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="flex items-center gap-2 text-xs font-medium text-white/80 mb-2">
+        <label className="flex items-center gap-2 text-xs font-medium text-ink mb-2">
           <HardDrive className="w-3.5 h-3.5 text-green-400" />
           {t.storage_service}
         </label>
@@ -94,7 +67,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
                 if (option.id === "s3") setActiveTab("s3");
                 if (option.id === "webdav") setActiveTab("webdav");
               }}
-              className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 border ${storageType === option.id ? "bg-green-600/90 border-green-500/50 text-white shadow-lg shadow-green-900/20" : "bg-white/[0.03] border-white/10 text-white/60 hover:bg-white/[0.06] hover:text-white hover:border-white/20"}`}
+              className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 border ${storageType === option.id ? "bg-green-600 border-green-600 text-white shadow-card" : "bg-fill-subtle border-stroke text-ink-secondary hover:bg-fill hover:text-ink hover:border-stroke"}`}
             >
               {option.label}
             </button>
@@ -102,12 +75,12 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
         </div>
       </div>
 
-      <div className="pt-2 border-t border-white/5">
+      <div className="pt-2 border-t border-stroke-subtle">
         <label className="flex items-center gap-2 text-xs font-medium text-red-400 mb-2">
           <Trash2 className="w-3.5 h-3.5" />
           {t.clearData}
         </label>
-        <p className="text-xs text-white/40 mb-3">{t.clearDataDesc}</p>
+        <p className="text-xs text-ink-tertiary mb-3">{t.clearDataDesc}</p>
         {!showClearConfirm ? (
           <button
             onClick={() => setShowClearConfirm(true)}
@@ -126,13 +99,13 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="flex-1 py-2 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg text-xs font-medium transition-colors"
+                className="flex-1 py-2 bg-fill-subtle hover:bg-fill text-ink-secondary hover:text-ink rounded-lg text-xs font-medium transition-colors"
               >
                 {t.cancel}
               </button>
               <button
                 onClick={onClearData}
-                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-red-900/20"
+                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition-colors shadow-card"
               >
                 {t.confirm}
               </button>

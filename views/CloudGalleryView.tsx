@@ -361,10 +361,10 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
       {/* Header */}
       <div className="flex flex-row items-center justify-between mb-4 gap-4">
         <div className="min-w-0 flex-1 mr-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight truncate">
+          <h2 className="text-2xl md:text-3xl font-bold text-ink tracking-tight truncate">
             {t.gallery_title}
           </h2>
-          <p className="text-white/60 mt-1 text-xs md:text-base truncate">
+          <p className="text-ink-secondary mt-1 text-xs md:text-base truncate">
             {t.gallery_subtitle}
           </p>
         </div>
@@ -374,8 +374,8 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
             <label
               className={`
                             flex items-center justify-center gap-2 px-4 md:px-6 py-2 md:py-2.5 
-                            rounded-full font-bold text-white cursor-pointer shadow-lg
-                            bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500
+                            rounded-full font-bold text-on-accent cursor-pointer shadow-card
+                            generate-button-gradient
                             hover:opacity-90 active:scale-95 transition-all text-sm md:text-base
                             ${uploading ? "opacity-70 cursor-not-allowed" : ""}
                         `}
@@ -402,8 +402,8 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
               onClick={onOpenSettings}
               className="
                                 flex items-center justify-center gap-2 px-4 md:px-6 py-2 md:py-2.5 
-                                rounded-full font-bold text-white cursor-pointer shadow-lg
-                                bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500
+                                rounded-full font-bold text-on-accent cursor-pointer shadow-card
+                                generate-button-gradient
                                 hover:opacity-90 active:scale-95 transition-all text-sm md:text-base
                             "
             >
@@ -416,12 +416,12 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
       </div>
 
       {!isConfigured ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-white/30 space-y-4 min-h-[50vh] animate-in fade-in duration-500">
+        <div className="flex-1 flex flex-col items-center justify-center text-ink-tertiary space-y-4 min-h-[50vh] animate-in fade-in duration-500">
           <div className="text-center space-y-2 max-w-md px-4">
-            <h3 className="text-xl font-medium text-white/60">
+            <h3 className="text-xl font-medium text-ink-secondary">
               {t.gallery_setup_title}
             </h3>
-            <p className="text-sm text-white/40 leading-relaxed">
+            <p className="text-sm text-ink-tertiary leading-relaxed">
               {t.gallery_setup_desc}
             </p>
           </div>
@@ -440,9 +440,9 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
           </div>
         </div>
       ) : files.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-white/30 space-y-4 min-h-[50vh] animate-in slide-in-from-bottom-4 duration-500">
+        <div className="flex-1 flex flex-col items-center justify-center text-ink-tertiary space-y-4 min-h-[50vh] animate-in slide-in-from-bottom-4 duration-500">
           <ImageIcon className="w-16 h-16 opacity-30" />
-          <h3 className="text-xl font-medium text-white/50">
+          <h3 className="text-xl font-medium text-ink-secondary">
             {t.cloud_gallery_empty}
           </h3>
           <p className="text-sm">{t.cloud_gallery_desc}</p>
@@ -462,15 +462,15 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
               return (
                 <div
                   key={file.key}
-                  className="break-inside-avoid mb-4 group relative overflow-hidden bg-white/[0.02] transition-all duration-500 rounded-xl border border-white/5 hover:border-white/20 animate-in fade-in zoom-in-95 hover:shadow-2xl hover:shadow-purple-500/10"
+                  className="break-inside-avoid mb-4 group relative overflow-hidden bg-surface transition-all duration-500 rounded-xl border border-stroke hover:border-stroke-strong animate-in fade-in zoom-in-95 hover:shadow-card-hover"
                 >
                   <div
-                    className="relative min-h-[150px] bg-white/5 flex items-center justify-center cursor-zoom-in"
+                    className="relative min-h-[150px] bg-fill-subtle flex items-center justify-center cursor-zoom-in"
                     onClick={() => setFullscreenImage(file)}
                   >
                     {displayUrl ? (
                       file.type === "video" ? (
-                        <div className="relative w-full aspect-[9/16] bg-black/40 flex items-center justify-center">
+                        <div className="relative w-full aspect-[9/16] bg-fill flex items-center justify-center">
                           <video
                             src={displayUrl}
                             className="w-full h-full object-cover pointer-events-none"
@@ -491,7 +491,7 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
                       )
                     ) : (
                       <div className="flex items-center justify-center w-full h-40">
-                        <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
+                        <Loader2 className="w-6 h-6 text-ink-tertiary animate-spin" />
                       </div>
                     )}
 
@@ -518,7 +518,7 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
                               handleToggleNSFW(file);
                             }}
                             aria-label={isNSFW ? t.unmark_nsfw : t.mark_nsfw}
-                            className={`p-2 hover:bg-white/10 active:scale-90 rounded-full transition-all ${isNSFW ? "text-purple-400" : "text-white/80"}`}
+                            className={`p-2 hover:bg-white/10 active:scale-90 rounded-full transition-all ${isNSFW ? "text-accent" : "text-white/80"}`}
                           >
                             {togglingNsfwId === file.key ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -602,7 +602,7 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
             className="h-20 w-full flex items-center justify-center mt-4"
           >
             {visibleFiles.length < files.length && (
-              <div className="flex flex-col items-center gap-2 text-white/30">
+          <div className="flex flex-col items-center gap-2 text-ink-tertiary">
                 <Loader2 className="w-6 h-6 animate-spin" />
               </div>
             )}

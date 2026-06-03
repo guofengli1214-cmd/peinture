@@ -29,7 +29,10 @@ export const fetchServerModels = async (
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  const response = await fetch("/api/v1/models", { headers });
+  const response = await fetch("/api/v1/models", {
+    headers,
+    credentials: "include",
+  });
   if (!response.ok) {
     if (response.status === 401) throw new Error("401");
     throw new Error("Failed to fetch server models");
@@ -67,6 +70,7 @@ export const generateCustomImage = async (
   const response = await fetch(`${baseUrl}/v1/generate`, {
     method: "POST",
     headers,
+    credentials: "include",
     body: JSON.stringify(body),
   });
 
@@ -138,6 +142,7 @@ export const editImageCustom = async (
   const response = await fetch(`${baseUrl}/v1/edit`, {
     method: "POST",
     headers, // Do not set Content-Type, let browser set it with boundary
+    credentials: "include",
     body: formData,
   });
 
@@ -169,7 +174,7 @@ export const editImageCustom = async (
 export const generateCustomVideo = async (
   provider: CustomProvider,
   model: string,
-  imageUrl: string,
+  image: Blob,
   prompt: string,
   duration: number,
   seed: number,
@@ -177,25 +182,25 @@ export const generateCustomVideo = async (
   guidance: number,
 ): Promise<{ url?: string; taskId?: string; predict?: number }> => {
   const baseUrl = cleanUrl(provider.apiUrl);
-  const body = {
-    model,
-    imageUrl,
-    prompt,
-    duration,
-    seed,
-    steps,
-    guidance,
-  };
 
-  const videoHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  // Upload the image bytes (the server cannot fetch the browser's blob: URL).
+  const formData = new FormData();
+  formData.append("model", model);
+  formData.append("prompt", prompt);
+  formData.append("duration", String(duration));
+  formData.append("seed", String(seed));
+  formData.append("steps", String(steps));
+  formData.append("guidance", String(guidance));
+  formData.append("image", image);
+
+  const videoHeaders: Record<string, string> = {};
   if (provider.token) videoHeaders["Authorization"] = `Bearer ${provider.token}`;
 
   const response = await fetch(`${baseUrl}/v1/video`, {
     method: "POST",
-    headers: videoHeaders,
-    body: JSON.stringify(body),
+    headers: videoHeaders, // let the browser set the multipart boundary
+    credentials: "include",
+    body: formData,
   });
 
   if (!response.ok) {
@@ -234,6 +239,7 @@ export const getCustomTaskStatus = async (
     const response = await fetch(`${baseUrl}/v1/task-status?taskId=${taskId}`, {
       method: "GET",
       headers,
+      credentials: "include",
     });
 
     if (!response.ok) throw new Error("Failed to check task status");
@@ -277,6 +283,7 @@ export const optimizePromptCustom = async (
   const response = await fetch(`${baseUrl}/v1/text`, {
     method: "POST",
     headers: textHeaders,
+    credentials: "include",
     body: JSON.stringify(body),
   });
 
@@ -291,23 +298,23 @@ export const optimizePromptCustom = async (
 export const upscaleImageCustom = async (
   provider: CustomProvider,
   model: string,
-  imageUrl: string,
+  image: Blob,
 ): Promise<{ url: string }> => {
   const baseUrl = cleanUrl(provider.apiUrl);
-  const body = {
-    model,
-    imageUrl,
-  };
 
-  const upscaleHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  // Upload the image bytes (the server cannot fetch the browser's blob: URL).
+  const formData = new FormData();
+  formData.append("model", model);
+  formData.append("image", image);
+
+  const upscaleHeaders: Record<string, string> = {};
   if (provider.token) upscaleHeaders["Authorization"] = `Bearer ${provider.token}`;
 
   const response = await fetch(`${baseUrl}/v1/upscaler`, {
     method: "POST",
-    headers: upscaleHeaders,
-    body: JSON.stringify(body),
+    headers: upscaleHeaders, // let the browser set the multipart boundary
+    credentials: "include",
+    body: formData,
   });
 
   if (!response.ok) {

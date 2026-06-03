@@ -1,0 +1,104 @@
+import { describe, it, expect } from "vitest";
+import {
+  parseModelId,
+  findModel,
+  availableModels,
+  toClientModels,
+  qualifiedId,
+} from "./models";
+import { runWithTokenRetry, isQuotaError } from "./tokenRetry";
+
+describe("model registry", () => {
+  it("parses provider-qualified ids", () => {
+    expect(parseModelId("huggingface:z-image-turbo")).toEqual({
+      provider: "huggingface",
+      modelId: "z-image-turbo",
+    });
+  });
+
+  it("defaults a bare id to huggingface", () => {
+    expect(parseModelId("z-image-turbo")).toEqual({
+      provider: "huggingface",
+      modelId: "z-image-turbo",
+    });
+  });
+
+  it("finds a registry model by qualified id", () => {
+    const m = findModel("huggingface:z-image");
+    expect(m?.name).toBe("Z-Image");
+    expect(m?.guidance?.default).toBe(4);
+  });
+
+  it("exposes HuggingFace models even with no tokens", () => {
+    const models = availableModels(() => false);
+    expect(models.length).toBeGreaterThan(0);
+    expect(models.every((m) => m.provider === "huggingface")).toBe(true);
+  });
+
+  it("toClientModels emits provider-qualified ids and types", () => {
+    const client = toClientModels([
+      { provider: "huggingface", modelId: "z-image-turbo", name: "Z", type: ["text2image"] },
+    ]);
+    expect(client[0].id).toBe("huggingface:z-image-turbo");
+    expect(client[0].type).toEqual(["text2image"]);
+  });
+
+  it("qualifiedId round-trips with parseModelId", () => {
+    const m = { provider: "huggingface" as const, modelId: "qwen-image", name: "Q", type: ["text2image" as const] };
+    expect(parseModelId(qualifiedId(m))).toEqual({ provider: "huggingface", modelId: "qwen-image" });
+  });
+});
+
+describe("token retry", () => {
+  it("detects quota errors by status and message", () => {
+    expect(isQuotaError({ status: 429 })).toBe(true);
+    expect(isQuotaError(new Error("insufficient_quota"))).toBe(true);
+    expect(isQuotaError(new Error("bad request"))).toBe(false);
+  });
+
+  it("runs once with null token when optional and none configured", async () => {
+    let received: string | null = "unset";
+    const out = await runWithTokenRetry([], { optional: true }, async (t) => {
+      received = t;
+      return "ok";
+    });
+    expect(out).toBe("ok");
+    expect(received).toBeNull();
+  });
+
+  it("throws requiredError when not optional and none configured", async () => {
+    await expect(
+      runWithTokenRetry([], { requiredError: "need_token" }, async () => "x"),
+    ).rejects.toThrow("need_token");
+  });
+
+  it("rotates to the next token on a quota error", async () => {
+    const tried: string[] = [];
+    const out = await runWithTokenRetry(["a", "b"], {}, async (t) => {
+      tried.push(t!);
+      if (t === "a") throw new Error("429");
+      return "done";
+    });
+    expect(out).toBe("done");
+    expect(tried).toEqual(["a", "b"]);
+  });
+
+  it("aborts immediately on a non-quota error", async () => {
+    const tried: string[] = [];
+    await expect(
+      runWithTokenRetry(["a", "b"], {}, async (t) => {
+        tried.push(t!);
+        throw new Error("invalid prompt");
+      }),
+    ).rejects.toThrow("invalid prompt");
+    expect(tried).toEqual(["a"]);
+  });
+
+  it("throws exhaustedError when all tokens hit quota", async () => {
+    await expect(
+      runWithTokenRetry(["a", "b"], { exhaustedError: "all_gone" }, async () => {
+        throw new Error("429");
+      }),
+    ).rejects.toThrow("all_gone");
+  });
+});

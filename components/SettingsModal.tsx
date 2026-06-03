@@ -15,11 +15,17 @@ import { translations } from "../translations";
 import { useSettingsForm } from "../hooks/useSettingsForm";
 import { SettingsTabs } from "./settings/SettingsTabs";
 import { GeneralTab } from "./settings/GeneralTab";
-import { ProviderTab } from "./settings/ProviderTab";
 import { ModelsTab } from "./settings/ModelsTab";
 import { PromptTab } from "./settings/PromptTab";
 import { LiveTab } from "./settings/LiveTab";
 import { StorageTab } from "./settings/StorageTab";
+import { ProvidersManager } from "./ProvidersManager";
+import {
+  listProviders,
+  createProvider,
+  updateProvider,
+  deleteProvider,
+} from "../services/providerService";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -58,7 +64,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const tabs = useMemo(() => {
     const base = [
       { id: "general", icon: Settings2, label: t.tab_general },
-      { id: "provider", icon: Server, label: t.tab_provider },
+      { id: "providers", icon: Server, label: t.tab_providers },
       { id: "models", icon: Cpu, label: t.model },
       { id: "prompt", icon: MessageSquareText, label: t.tab_prompt },
       { id: "live", icon: Film, label: t.tab_live },
@@ -81,21 +87,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
       {/* Backdrop: Immediate In, Delayed Out */}
       <div
-        className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-out ${isVisible ? "opacity-100" : "opacity-0 delay-200"}`}
+        className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ease-out ${isVisible ? "opacity-100" : "opacity-0 delay-200"}`}
         onClick={onClose}
       />
 
       {/* Modal: Delayed In, Immediate Out */}
       <div
-        className={`relative w-full max-w-md bg-[#0D0B14]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-[0_0_50px_-12px_rgba(124,58,237,0.15)] ring-1 ring-white/[0.05] overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isVisible ? "scale-100 opacity-100 translate-y-0 delay-100" : "scale-95 opacity-0 translate-y-4"}`}
+        className={`relative w-full max-w-md bg-surface backdrop-blur-xl border border-stroke rounded-2xl shadow-dialog overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isVisible ? "scale-100 opacity-100 translate-y-0 delay-100" : "scale-95 opacity-0 translate-y-4"}`}
       >
-        <div className="flex items-center justify-between px-5 py-2 border-b border-white/[0.06] bg-white/[0.02] flex-shrink-0">
-          <h2 className="text-lg font-bold text-white tracking-wide">
+        <div className="flex items-center justify-between px-5 py-2 border-b border-stroke-subtle bg-fill-subtle flex-shrink-0">
+          <h2 className="text-lg font-bold text-ink tracking-wide">
             {t.settings}
           </h2>
           <button
             onClick={onClose}
-            className="group p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.08] transition-all duration-200"
+            className="group p-2 rounded-lg text-ink-tertiary hover:text-ink hover:bg-fill transition-all duration-200"
           >
             <X className="w-5 h-5 transition-transform duration-500 ease-out group-hover:rotate-180" />
           </button>
@@ -121,8 +127,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="p-5">
                   {tab.id === "general" && (
                     <GeneralTab
-                      serviceMode={form.serviceMode}
-                      setServiceMode={form.handleServiceModeChange}
                       storageType={form.storageType}
                       setStorageType={form.setStorageType}
                       onClearData={form.handleClearData}
@@ -130,48 +134,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                   )}
 
-                  {tab.id === "provider" && (
-                    <ProviderTab
-                      serviceMode={form.serviceMode}
-                      token={form.token}
-                      stats={form.stats}
-                      giteeToken={form.giteeToken}
-                      giteeStats={form.giteeStats}
-                      msToken={form.msToken}
-                      msStats={form.msStats}
-                      a4fToken={form.a4fToken}
-                      a4fStats={form.a4fStats}
-                      openaiToken={form.openaiToken}
-                      openaiStats={form.openaiStats}
-                      googleToken={form.googleToken}
-                      googleStats={form.googleStats}
-                      openaiConfig={form.openaiConfig}
-                      setOpenaiConfig={form.setOpenaiConfig}
-                      googleConfig={form.googleConfig}
-                      setGoogleConfig={form.setGoogleConfig}
-                      updateToken={form.updateToken}
-                      customProviders={form.customProviders}
-                      handleUpdateCustomProvider={
-                        form.handleUpdateCustomProvider
-                      }
-                      handleDeleteCustomProvider={
-                        form.handleDeleteCustomProvider
-                      }
-                      handleRefreshCustomModels={form.handleRefreshCustomModels}
-                      refreshingProviders={form.refreshingProviders}
-                      refreshSuccessProviders={form.refreshSuccessProviders}
-                      refreshErrorProviders={form.refreshErrorProviders}
-                      newProviderName={form.newProviderName}
-                      setNewProviderName={form.setNewProviderName}
-                      newProviderUrl={form.newProviderUrl}
-                      setNewProviderUrl={form.setNewProviderUrl}
-                      newProviderToken={form.newProviderToken}
-                      setNewProviderToken={form.setNewProviderToken}
-                      fetchStatus={form.fetchStatus}
-                      fetchedModels={form.fetchedModels}
-                      handleFetchCustomModels={form.handleFetchCustomModels}
-                      handleAddCustomProvider={form.handleAddCustomProvider}
-                      handleClearAddForm={form.handleClearAddForm}
+                  {tab.id === "providers" && (
+                    <ProvidersManager
+                      title={t.prov_mine}
+                      load={listProviders}
+                      onCreate={createProvider}
+                      onUpdate={updateProvider}
+                      onDelete={deleteProvider}
                     />
                   )}
 
@@ -235,16 +204,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-5 py-2 border-t border-white/[0.06] bg-white/[0.02] flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 px-5 py-2 border-t border-stroke-subtle bg-fill-subtle flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-medium text-white/60 hover:text-white hover:bg-white/[0.06] rounded-lg transition-all duration-200"
+            className="px-5 py-2.5 text-sm font-medium text-ink-secondary hover:text-ink hover:bg-fill rounded-lg transition-all duration-200"
           >
             {t.cancel}
           </button>
           <button
             onClick={form.handleSave}
-            className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-purple-600 hover:bg-purple-500 active:bg-purple-700 active:scale-95 rounded-lg transition-all shadow-[0_4px_20px_-4px_rgba(147,51,234,0.5)] hover:shadow-[0_4px_25px_-4px_rgba(147,51,234,0.6)]"
+            className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-on-accent bg-accent hover:bg-accent-hover active:bg-accent-pressed active:scale-95 rounded-lg transition-all shadow-card hover:shadow-card-hover"
           >
             <Save className="w-4 h-4" />
             {t.save}

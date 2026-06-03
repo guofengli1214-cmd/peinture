@@ -1,0 +1,54 @@
+# Deploy Peinture (Node API + Nginx web) against an EXISTING MySQL container.
+#
+# Assumes a MySQL container named `mysql8` is running on the external Docker
+# network `mysql8_default` (the buildDockerMysql stack). The API joins that
+# network and reaches the database as host `mysql8`.
+#
+# Usage (from repo root, with secrets in .env):
+#   docker compose -f docker-compose.external-mysql.yml up -d --build
+
+services:
+  api:
+    build: ./server
+    image: peinture-api:latest
+    container_name: peinture-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: mysql8
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-peinture}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      DB_NAME: ${DB_NAME:-peinture}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in .env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-168}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    networks:
+      - default
+      - mysql_net
+    expose:
+      - "3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: peinture-web:latest
+    container_name: peinture-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    networks:
+      - default
+
+networks:
+  default:
+  # The network created by the existing MySQL (buildDockerMysql) compose stack.
+  mysql_net:
+    external: true
+    name: mysql8_default

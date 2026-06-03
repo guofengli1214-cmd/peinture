@@ -31,7 +31,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   ];
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-0.5 p-1.5 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-30 max-w-[95vw]">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-0.5 p-1.5 bg-surface/90 backdrop-blur-xl border border-stroke rounded-2xl shadow-flyout z-30 max-w-[95vw]">
       <Tooltip
         content={activeTool === "move" ? t.tool_select : t.tool_move}
         position="bottom"
@@ -42,15 +42,15 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           }
           className={`p-2 rounded-xl transition-all ${
             activeTool === "move"
-              ? "bg-purple-600 text-white shadow-lg"
-              : "text-white/60 hover:text-white hover:bg-white/10"
+              ? "bg-accent text-on-accent shadow-card"
+              : "text-ink-secondary hover:text-ink hover:bg-fill"
           }`}
         >
           <Hand className="w-5 h-5" />
         </button>
       </Tooltip>
 
-      <div className="w-px h-5 bg-white/10 mx-1" />
+      <div className="w-px h-5 bg-stroke mx-1" />
 
       {drawingTools.map((tool) => {
         const Icon = tool.icon;
@@ -60,8 +60,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
               onClick={() => setActiveTool(tool.id as any)}
               className={`p-2 rounded-xl transition-all ${
                 activeTool === tool.id
-                  ? "bg-purple-600 text-white shadow-lg"
-                  : "text-white/60 hover:text-white hover:bg-white/10"
+                  ? "bg-accent text-on-accent shadow-card"
+                  : "text-ink-secondary hover:text-ink hover:bg-fill"
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -70,13 +70,13 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
         );
       })}
 
-      <div className="w-px h-5 bg-white/10 mx-1" />
+      <div className="w-px h-5 bg-stroke mx-1" />
 
       <Tooltip content={t.tool_undo} position="bottom">
         <button
           onClick={onUndo}
           disabled={!canUndo}
-          className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed group"
+          className="p-2 text-ink-secondary hover:text-ink hover:bg-fill rounded-xl disabled:opacity-30 disabled:cursor-not-allowed group"
         >
           <Undo2 className="w-5 h-5" />
         </button>
@@ -91,21 +91,21 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             onChange={(e) => setBrushColor(e.target.value)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
-          <div className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+          <div className="p-2 hover:bg-fill rounded-xl transition-colors">
             <div
-              className="w-5 h-5 rounded-full border-2 border-white/20 shadow-sm"
+              className="w-5 h-5 rounded-full border-2 border-stroke shadow-sm"
               style={{ backgroundColor: brushColor }}
             ></div>
           </div>
         </label>
       </Tooltip>
 
-      <div className="w-px h-5 bg-white/10 mx-1" />
+      <div className="w-px h-5 bg-stroke mx-1" />
 
       <Tooltip content={t.tool_exit} position="bottom">
         <button
           onClick={() => setShowExitDialog(true)}
-          className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+          className="p-2 text-ink-tertiary hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
         >
           <LogOut className="w-5 h-5" />
         </button>
