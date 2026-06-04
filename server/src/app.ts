@@ -5,7 +5,6 @@ import { createAuthRouter } from "./routes/auth";
 import { createConfigRouter } from "./routes/config";
 import { createAdminRouter } from "./routes/adminUsers";
 import { createAdminProviderRouter } from "./routes/adminProviders";
-import { createProviderRouter } from "./routes/providers";
 import { createV1Router } from "./routes/v1";
 
 /**
@@ -24,7 +23,6 @@ export function createApp(ctx: AppContext): Express {
 
   app.use("/api/auth", createAuthRouter(ctx));
   app.use("/api/config", createConfigRouter(ctx));
-  app.use("/api/providers", createProviderRouter(ctx));
   app.use("/api/admin", createAdminRouter(ctx));
   app.use("/api/admin", createAdminProviderRouter(ctx));
   app.use("/api/v1", createV1Router(ctx));

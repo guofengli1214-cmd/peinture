@@ -18,4 +18,10 @@ describe("app", () => {
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "not_found" });
   });
+
+  it("self-service /api/providers is removed (404)", async () => {
+    const res = await request(createApp(ctx)).post("/api/providers");
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "not_found" });
+  });
 });
