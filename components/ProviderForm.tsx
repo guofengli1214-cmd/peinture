@@ -4,6 +4,7 @@ import {
   ApiProviderFormat,
   ApiProviderCapability,
   ApiProviderModelDef,
+  GradioModelConfig,
   CustomApiProvider,
   CustomApiProviderInput,
 } from "../types";
@@ -16,11 +17,19 @@ interface ProviderFormProps {
   onCancel: () => void;
 }
 
-const CAPS: ApiProviderCapability[] = ["image", "edit", "text"];
-const FORMATS: ApiProviderFormat[] = ["openai", "claude", "gemini"];
+const CAPS: ApiProviderCapability[] = ["image", "edit", "text", "video", "upscale"];
+const FORMATS: ApiProviderFormat[] = ["openai", "claude", "gemini", "gradio"];
 
 const inputCls =
   "w-full px-3 py-2 fluent-field rounded-md text-ink text-sm focus:outline-none transition-colors";
+
+const emptyGradio = (): GradioModelConfig => ({
+  baseUrl: "",
+  fnIndex: 0,
+  triggerId: 0,
+  argsTemplate: [],
+  outputPath: "data[0]",
+});
 
 export const ProviderForm: React.FC<ProviderFormProps> = ({ initial, onSubmit, onCancel }) => {
   const { language } = useSettingsStore();
@@ -32,38 +41,119 @@ export const ProviderForm: React.FC<ProviderFormProps> = ({ initial, onSubmit, o
   const [secret, setSecret] = useState("");
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
   const [models, setModels] = useState<ApiProviderModelDef[]>(
-    initial?.models?.length ? initial.models : [{ modelId: "", name: "", capabilities: ["image"] }],
+    initial?.models?.length
+      ? initial.models
+      : [{ modelId: "", name: "", capabilities: ["image"], enabled: true }],
+  );
+  // Raw JSON text per-model for the gradio argsTemplate textarea (parsed on submit).
+  const [argsText, setArgsText] = useState<string[]>(() =>
+    (initial?.models?.length ? initial.models : [null]).map((m) =>
+      JSON.stringify(m?.gradio?.argsTemplate ?? []),
+    ),
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const capLabel = (c: ApiProviderCapability) =>
-    c === "image" ? t.cap_image : c === "edit" ? t.cap_edit : t.cap_text;
+    c === "image"
+      ? t.cap_image
+      : c === "edit"
+        ? t.cap_edit
+        : c === "text"
+          ? t.cap_text
+          : c === "video"
+            ? t.cap_video
+            : t.cap_upscale;
 
   const updateModel = (i: number, patch: Partial<ApiProviderModelDef>) =>
     setModels((prev) => prev.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
+
+  const updateGradio = (i: number, patch: Partial<GradioModelConfig>) =>
+    setModels((prev) =>
+      prev.map((m, idx) =>
+        idx === i ? { ...m, gradio: { ...(m.gradio ?? emptyGradio()), ...patch } } : m,
+      ),
+    );
+
+  const updateArgsText = (i: number, value: string) =>
+    setArgsText((prev) => prev.map((s, idx) => (idx === i ? value : s)));
 
   const toggleCap = (i: number, cap: ApiProviderCapability) =>
     setModels((prev) =>
       prev.map((m, idx) => {
         if (idx !== i) return m;
         const has = m.capabilities.includes(cap);
-        return { ...m, capabilities: has ? m.capabilities.filter((c) => c !== cap) : [...m.capabilities, cap] };
+        return {
+          ...m,
+          capabilities: has ? m.capabilities.filter((c) => c !== cap) : [...m.capabilities, cap],
+        };
       }),
     );
 
+  const addModel = () => {
+    setModels((p) => [...p, { modelId: "", name: "", capabilities: ["image"], enabled: true }]);
+    setArgsText((p) => [...p, "[]"]);
+  };
+
+  const removeModel = (i: number) => {
+    setModels((p) => p.filter((_, idx) => idx !== i));
+    setArgsText((p) => p.filter((_, idx) => idx !== i));
+  };
+
   const canSubmit =
-    name.trim() && apiUrl.trim() && models.some((m) => m.modelId.trim() && m.capabilities.length > 0);
+    name.trim() &&
+    (format === "gradio" || apiUrl.trim()) &&
+    models.some((m) => m.modelId.trim() && m.capabilities.length > 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit || submitting) return;
-    setSubmitting(true);
     setError(null);
-    const cleanModels = models
+
+    // Parse gradio argsTemplate JSON up-front so we can abort before submitting.
+    const parsedArgs: unknown[][] = [];
+    if (format === "gradio") {
+      for (let i = 0; i < models.length; i++) {
+        const m = models[i];
+        if (!(m.modelId.trim() && m.capabilities.length > 0)) {
+          parsedArgs[i] = [];
+          continue;
+        }
+        try {
+          const parsed = JSON.parse(argsText[i] ?? "[]");
+          if (!Array.isArray(parsed)) throw new Error("not an array");
+          parsedArgs[i] = parsed;
+        } catch {
+          setError(t.prov_gradio_args_invalid);
+          return;
+        }
+      }
+    }
+
+    setSubmitting(true);
+    const cleanModels: ApiProviderModelDef[] = models
       .filter((m) => m.modelId.trim() && m.capabilities.length > 0)
-      .map((m) => ({ modelId: m.modelId.trim(), name: m.name.trim() || m.modelId.trim(), capabilities: m.capabilities }));
-    const input: CustomApiProviderInput = { name: name.trim(), apiUrl: apiUrl.trim(), format, models: cleanModels, enabled };
+      .map((m, i) => {
+        const base: ApiProviderModelDef = {
+          modelId: m.modelId.trim(),
+          name: m.name.trim() || m.modelId.trim(),
+          capabilities: m.capabilities,
+          enabled: m.enabled !== false,
+        };
+        if (format === "openai" && m.endpointPath) base.endpointPath = m.endpointPath;
+        if (format === "gradio") {
+          const g = m.gradio ?? emptyGradio();
+          base.gradio = { ...g, argsTemplate: parsedArgs[i] ?? [] };
+        }
+        return base;
+      });
+    const input: CustomApiProviderInput = {
+      name: name.trim(),
+      apiUrl: apiUrl.trim(),
+      format,
+      models: cleanModels,
+      enabled,
+    };
     if (secret) input.secret = secret; // omit on edit keeps current key
     try {
       await onSubmit(input);
@@ -105,7 +195,7 @@ export const ProviderForm: React.FC<ProviderFormProps> = ({ initial, onSubmit, o
               <input className={inputCls} placeholder={t.prov_model_id} value={m.modelId} onChange={(e) => updateModel(i, { modelId: e.target.value })} />
               <input className={inputCls} placeholder={t.prov_model_name} value={m.name} onChange={(e) => updateModel(i, { name: e.target.value })} />
               {models.length > 1 && (
-                <button type="button" onClick={() => setModels((p) => p.filter((_, idx) => idx !== i))}
+                <button type="button" onClick={() => removeModel(i)}
                   className="px-2 text-red-400 hover:text-red-300 shrink-0"><Trash2 className="w-4 h-4" /></button>
               )}
             </div>
@@ -117,9 +207,60 @@ export const ProviderForm: React.FC<ProviderFormProps> = ({ initial, onSubmit, o
                 </button>
               ))}
             </div>
+
+            <label className="flex items-center gap-2 text-[11px] text-ink-secondary">
+              <input type="checkbox" checked={m.enabled !== false} onChange={(e) => updateModel(i, { enabled: e.target.checked })} />
+              {t.prov_model_enabled}
+            </label>
+
+            {format === "openai" && (
+              <input className={inputCls} placeholder={t.prov_endpoint_path}
+                value={m.endpointPath ?? ""}
+                onChange={(e) => updateModel(i, { endpointPath: e.target.value || undefined })} />
+            )}
+
+            {format === "gradio" && (
+              <div className="flex flex-col gap-2 border-t border-stroke pt-2">
+                <input className={inputCls} placeholder={t.prov_gradio_base_url}
+                  value={m.gradio?.baseUrl ?? ""}
+                  onChange={(e) => updateGradio(i, { baseUrl: e.target.value })} />
+                <div className="flex gap-2">
+                  <input className={inputCls} type="number" placeholder={t.prov_gradio_fn_index}
+                    value={m.gradio?.fnIndex ?? 0}
+                    onChange={(e) => updateGradio(i, { fnIndex: Number(e.target.value) })} />
+                  <input className={inputCls} type="number" placeholder={t.prov_gradio_trigger_id}
+                    value={m.gradio?.triggerId ?? 0}
+                    onChange={(e) => updateGradio(i, { triggerId: Number(e.target.value) })} />
+                </div>
+                <div className="flex gap-2">
+                  <input className={inputCls} placeholder={t.prov_gradio_output_path}
+                    value={m.gradio?.outputPath ?? ""}
+                    onChange={(e) => updateGradio(i, { outputPath: e.target.value })} />
+                  <input className={inputCls} placeholder={t.prov_gradio_seed_path}
+                    value={m.gradio?.seedPath ?? ""}
+                    onChange={(e) => updateGradio(i, { seedPath: e.target.value || undefined })} />
+                </div>
+                <div className="flex gap-2">
+                  <input className={inputCls} type="number" placeholder={t.prov_gradio_steps_default}
+                    value={m.gradio?.stepsDefault ?? ""}
+                    onChange={(e) => updateGradio(i, { stepsDefault: e.target.value === "" ? undefined : Number(e.target.value) })} />
+                  <input className={inputCls} type="number" placeholder={t.prov_gradio_guidance_default}
+                    value={m.gradio?.guidanceDefault ?? ""}
+                    onChange={(e) => updateGradio(i, { guidanceDefault: e.target.value === "" ? undefined : Number(e.target.value) })} />
+                </div>
+                <textarea className={inputCls} rows={2} placeholder={t.prov_gradio_negative}
+                  value={m.gradio?.negativePrompt ?? ""}
+                  onChange={(e) => updateGradio(i, { negativePrompt: e.target.value || undefined })} />
+                <label className="text-[11px] text-ink-secondary">{t.prov_gradio_args}</label>
+                <textarea className={inputCls} rows={2}
+                  placeholder={'["$prompt","$height","$width","$steps","$seed",false]'}
+                  value={argsText[i] ?? "[]"}
+                  onChange={(e) => updateArgsText(i, e.target.value)} />
+              </div>
+            )}
           </div>
         ))}
-        <button type="button" onClick={() => setModels((p) => [...p, { modelId: "", name: "", capabilities: ["image"] }])}
+        <button type="button" onClick={addModel}
           className="self-start text-xs text-accent hover:text-accent-hover flex items-center gap-1"><Plus className="w-3.5 h-3.5" />{t.prov_add_model}</button>
       </div>
 

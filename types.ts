@@ -112,14 +112,29 @@ export interface ServerCustomProvider {
     hasToken: boolean;
 }
 
-// --- User-defined / relay API providers (OpenAI / Claude / Gemini formats) ---
-export type ApiProviderFormat = 'openai' | 'claude' | 'gemini';
-export type ApiProviderCapability = 'image' | 'edit' | 'text';
+// --- User-defined / relay API providers (OpenAI / Claude / Gemini / Gradio formats) ---
+export type ApiProviderFormat = 'openai' | 'claude' | 'gemini' | 'gradio';
+export type ApiProviderCapability = 'image' | 'edit' | 'text' | 'video' | 'upscale';
+
+export interface GradioModelConfig {
+    baseUrl: string;
+    fnIndex: number;
+    triggerId: number;
+    argsTemplate: unknown[];
+    stepsDefault?: number;
+    guidanceDefault?: number;
+    negativePrompt?: string;
+    outputPath: string;
+    seedPath?: string;
+}
 
 export interface ApiProviderModelDef {
     modelId: string;
     name: string;
     capabilities: ApiProviderCapability[];
+    enabled?: boolean;
+    endpointPath?: string;
+    gradio?: GradioModelConfig;
 }
 
 /** A custom/relay provider as exposed to the browser (no raw secret). */
