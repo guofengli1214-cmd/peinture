@@ -4,28 +4,22 @@ import { createAuthMiddleware } from "../auth/middleware";
 import {
   listGlobal,
   createGlobalProvider,
-  listForUser,
-  createForUser,
   adminUpdate,
   adminDelete,
 } from "../services/customProviders";
 import { providerCreateSchema, providerPatchSchema, sendServiceError } from "./providerSchemas";
 
 /**
- * Admin management of custom providers (all under requireAdmin):
- *   GET/POST   /api/admin/providers                 — global providers
- *   GET/POST   /api/admin/users/:uid/providers      — a user's assigned providers
- *   PATCH/DEL  /api/admin/providers/:pid            — edit/delete ANY provider
+ * Admin management of GLOBAL custom providers (all under requireAdmin):
+ *   GET/POST   /api/admin/providers        — list / create global providers
+ *   PATCH/DEL  /api/admin/providers/:pid    — edit / delete any provider by id
+ *
+ * Per-user provider assignment was removed (unified to global, admin-only).
  */
 export function createAdminProviderRouter(ctx: AppContext): Router {
   const router = Router();
   const { requireAdmin } = createAuthMiddleware(ctx);
   router.use(requireAdmin);
-
-  function parseUid(raw: string): number | null {
-    const id = Number(raw);
-    return Number.isInteger(id) && id > 0 ? id : null;
-  }
 
   router.get("/providers", async (_req, res) => {
     res.json({ providers: await listGlobal(ctx) });
@@ -38,30 +32,6 @@ export function createAdminProviderRouter(ctx: AppContext): Router {
       return;
     }
     const provider = await createGlobalProvider(ctx, parsed.data);
-    res.status(201).json({ provider });
-  });
-
-  router.get("/users/:uid/providers", async (req, res) => {
-    const uid = parseUid(req.params.uid);
-    if (uid === null || !(await ctx.repos.users.findById(uid))) {
-      res.status(404).json({ error: "not_found" });
-      return;
-    }
-    res.json({ providers: await listForUser(ctx, uid) });
-  });
-
-  router.post("/users/:uid/providers", async (req, res) => {
-    const uid = parseUid(req.params.uid);
-    if (uid === null || !(await ctx.repos.users.findById(uid))) {
-      res.status(404).json({ error: "not_found" });
-      return;
-    }
-    const parsed = providerCreateSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: "invalid_request" });
-      return;
-    }
-    const provider = await createForUser(ctx, uid, parsed.data);
     res.status(201).json({ provider });
   });
 

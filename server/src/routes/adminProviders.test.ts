@@ -64,3 +64,28 @@ describe("admin provider routes — gradio zod acceptance", () => {
     expect(model.gradio.outputPath).toBe("data[0]");
   });
 });
+
+describe("admin provider routes — per-user routes removed", () => {
+  it("GET /api/admin/users/:uid/providers returns 404 (route removed)", async () => {
+    const { ctx, app } = await setup();
+    const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
+    const admin = await adminAgent(app);
+
+    const res = await admin.get(`/api/admin/users/${alice}/providers`);
+    expect(res.status).toBe(404);
+  });
+
+  it("POST /api/admin/users/:uid/providers returns 404 (route removed)", async () => {
+    const { ctx, app } = await setup();
+    const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
+    const admin = await adminAgent(app);
+
+    const res = await admin.post(`/api/admin/users/${alice}/providers`).send({
+      name: "Relay",
+      apiUrl: "https://relay",
+      format: "openai",
+      models: [{ modelId: "img-1", name: "Img", capabilities: ["image"] }],
+    });
+    expect(res.status).toBe(404);
+  });
+});
