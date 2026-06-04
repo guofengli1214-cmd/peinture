@@ -118,8 +118,11 @@ const EMPTY_WEBDAV: WebDAVConfig = { url: "", username: "", password: "", direct
 export function defaultConfig(): UserConfig {
   return {
     language: "en",
-    provider: "huggingface",
-    model: "z-image-turbo",
+    // The synthetic "server" provider (the backend proxy) is the only runtime
+    // provider; the model is chosen by server-init from the available server
+    // models, so the persisted default is left empty on first login.
+    provider: "server",
+    model: "",
     aspectRatio: "1:1",
     seed: "",
     steps: 9,

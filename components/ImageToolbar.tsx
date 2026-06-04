@@ -19,12 +19,6 @@ import { Tooltip } from "./Tooltip";
 import { GeneratedImage, ProviderOption } from "../types";
 import { isStorageConfigured } from "../services/storageService";
 import { getCustomProviders } from "../services/utils";
-import {
-  HF_MODEL_OPTIONS,
-  GITEE_MODEL_OPTIONS,
-  MS_MODEL_OPTIONS,
-  A4F_MODEL_OPTIONS,
-} from "../constants";
 import { useSettingsStore } from "../store/settingsStore";
 import { translations } from "../translations";
 
@@ -130,30 +124,21 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   };
 
   const getModelLabel = (modelValue: string, providerId?: string) => {
-    // First check standard lists
-    const option = [
-      ...HF_MODEL_OPTIONS,
-      ...GITEE_MODEL_OPTIONS,
-      ...MS_MODEL_OPTIONS,
-      ...A4F_MODEL_OPTIONS,
-    ].find((o) => o.value === modelValue);
-    if (option) return option.label;
+    const customProviders = getCustomProviders();
+    // Limit to the named provider when given, otherwise search every provider.
+    const candidates = providerId
+      ? customProviders.filter((p) => p.id === providerId)
+      : customProviders;
 
-    // Then check custom provider models if available
-    if (providerId) {
-      const customProviders = getCustomProviders();
-      const custom = customProviders.find((p) => p.id === providerId);
-      if (custom) {
-        // Search in all categories
-        const allModels = [
-          ...(custom.models.generate || []),
-          ...(custom.models.edit || []),
-          ...(custom.models.video || []),
-          ...(custom.models.text || []),
-        ];
-        const customModel = allModels.find((m) => m.id === modelValue);
-        if (customModel) return customModel.name;
-      }
+    for (const provider of candidates) {
+      const allModels = [
+        ...(provider.models.generate || []),
+        ...(provider.models.edit || []),
+        ...(provider.models.video || []),
+        ...(provider.models.text || []),
+      ];
+      const customModel = allModels.find((m) => m.id === modelValue);
+      if (customModel) return customModel.name;
     }
 
     return modelValue;

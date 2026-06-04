@@ -23,12 +23,6 @@ import {
   fetchServerModels,
   getCustomTaskStatus,
 } from "../services/customService";
-import {
-  HF_MODEL_OPTIONS,
-  GITEE_MODEL_OPTIONS,
-  MS_MODEL_OPTIONS,
-  A4F_MODEL_OPTIONS,
-} from "../constants";
 
 /** Stable id for the synthetic "Server" custom provider (the backend proxy). */
 const SERVER_PROVIDER_ID = "server";
@@ -148,13 +142,21 @@ export const useAppInit = () => {
 
           addCustomProvider(serverProvider);
 
-          // Point the active selection at the server provider unless it already
-          // is (preserves the user's persisted model choice on reload).
+          // Point the active selection at the server provider. The default
+          // provider is already SERVER_PROVIDER_ID, so this normally preserves
+          // the user's persisted model choice on reload; we only repoint the
+          // model when the persisted one is not among the server's available
+          // generate models (e.g. first login with the empty default).
           const generate = models.generate || [];
-          const currentProvider = useSettingsStore.getState().provider;
-          if (generate.length > 0 && currentProvider !== SERVER_PROVIDER_ID) {
-            setProvider(SERVER_PROVIDER_ID);
-            setModel(generate[0].id);
+          if (generate.length > 0) {
+            const state = useSettingsStore.getState();
+            if (state.provider !== SERVER_PROVIDER_ID) {
+              setProvider(SERVER_PROVIDER_ID);
+            }
+            const modelValid = generate.some((m) => m.id === state.model);
+            if (!modelValid) {
+              setModel(generate[0].id);
+            }
           }
         } catch (e) {
           serverInitRef.current = false; // Allow retry on error
@@ -340,19 +342,13 @@ export const useAppInit = () => {
   useEffect(() => {
     if (currentView === "creation") {
       let options: { value: string; label: string }[] = [];
-      if (provider === "gitee") options = GITEE_MODEL_OPTIONS;
-      else if (provider === "modelscope") options = MS_MODEL_OPTIONS;
-      else if (provider === "huggingface") options = HF_MODEL_OPTIONS;
-      else if (provider === "a4f") options = A4F_MODEL_OPTIONS;
-      else {
-        const customProviders = getCustomProviders();
-        const activeCustom = customProviders.find((p) => p.id === provider);
-        if (activeCustom?.models?.generate) {
-          options = activeCustom.models.generate.map((m) => ({
-            value: m.id,
-            label: m.name,
-          }));
-        }
+      const customProviders = getCustomProviders();
+      const activeCustom = customProviders.find((p) => p.id === provider);
+      if (activeCustom?.models?.generate) {
+        options = activeCustom.models.generate.map((m) => ({
+          value: m.id,
+          label: m.name,
+        }));
       }
 
       if (options.length > 0) {

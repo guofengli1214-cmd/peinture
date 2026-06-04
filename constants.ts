@@ -1,36 +1,5 @@
 import { ModelOption, ProviderOption } from "./types";
 
-export const HF_MODEL_OPTIONS = [
-  { value: "z-image-turbo", label: "Z-Image Turbo" },
-  { value: "z-image", label: "Z-Image" },
-  { value: "qwen-image", label: "Qwen Image" },
-  { value: "ovis-image", label: "Ovis Image" },
-  { value: "flux-1-schnell", label: "FLUX.1 Schnell" },
-];
-
-export const GITEE_MODEL_OPTIONS = [
-  { value: "z-image-turbo", label: "Z-Image Turbo" },
-  { value: "qwen-image", label: "Qwen Image" },
-  { value: "flux-2", label: "FLUX.2" },
-  { value: "flux-1-schnell", label: "FLUX.1 Schnell" },
-  { value: "flux-1-krea", label: "FLUX.1 Krea" },
-  { value: "flux-1", label: "FLUX.1" },
-];
-
-export const MS_MODEL_OPTIONS = [
-  { value: "z-image-turbo", label: "Z-Image Turbo" },
-  { value: "z-image", label: "Z-Image" },
-  { value: "flux-2", label: "FLUX.2" },
-  { value: "flux-1-krea", label: "FLUX.1 Krea" },
-  { value: "flux-1", label: "FLUX.1" },
-];
-
-export const A4F_MODEL_OPTIONS = [
-  { value: "z-image-turbo", label: "Z-Image Turbo" },
-  { value: "imagen-4", label: "Google Imagen 4" },
-  { value: "imagen-3.5", label: "Google Imagen 3.5" },
-];
-
 export const getModelConfig = (
   provider: ProviderOption,
   model: ModelOption,

@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { Language } from "../translations";
 import { ProviderOption, ModelOption, AspectRatioOption } from "../types";
-import { HF_MODEL_OPTIONS } from "../constants";
 
 export interface SettingsState {
   language: Language;
@@ -33,8 +32,11 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
     const browserLang = navigator.language.toLowerCase();
     return browserLang.startsWith("zh") ? "zh" : "en";
   })(),
-  provider: "huggingface",
-  model: HF_MODEL_OPTIONS[0].value as ModelOption,
+  // The synthetic "server" custom provider (the backend proxy) is the only
+  // runtime provider; the model is chosen by server-init from the available
+  // server models, so the transient default before hydration is left empty.
+  provider: "server",
+  model: "" as ModelOption,
   aspectRatio: "1:1",
   seed: "",
   steps: 9,
