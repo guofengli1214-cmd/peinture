@@ -150,10 +150,8 @@ export const en = {
   err_username_taken: "That username is already taken.",
 
   // Custom / relay API providers
-  tab_providers: "API Providers",
   prov_global: "Global Providers",
   prov_user: "User's Providers",
-  prov_mine: "My API Providers",
   prov_add: "Add Provider",
   prov_none: "No custom providers yet.",
   prov_name: "Name",

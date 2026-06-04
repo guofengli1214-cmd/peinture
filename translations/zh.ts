@@ -150,10 +150,8 @@ export const zh = {
   err_username_taken: "该用户名已被占用。",
 
   // 自定义 / 中转 API 接口
-  tab_providers: "API 接口",
   prov_global: "全局接口",
   prov_user: "该用户的接口",
-  prov_mine: "我的 API 接口",
   prov_add: "添加接口",
   prov_none: "暂无自定义接口。",
   prov_name: "名称",

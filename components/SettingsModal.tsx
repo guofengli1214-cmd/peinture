@@ -3,7 +3,6 @@ import {
   X,
   Save,
   Settings2,
-  Server,
   Cpu,
   MessageSquareText,
   Film,
@@ -19,13 +18,6 @@ import { ModelsTab } from "./settings/ModelsTab";
 import { PromptTab } from "./settings/PromptTab";
 import { LiveTab } from "./settings/LiveTab";
 import { StorageTab } from "./settings/StorageTab";
-import { ProvidersManager } from "./ProvidersManager";
-import {
-  listProviders,
-  createProvider,
-  updateProvider,
-  deleteProvider,
-} from "../services/providerService";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -64,7 +56,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const tabs = useMemo(() => {
     const base = [
       { id: "general", icon: Settings2, label: t.tab_general },
-      { id: "providers", icon: Server, label: t.tab_providers },
       { id: "models", icon: Cpu, label: t.model },
       { id: "prompt", icon: MessageSquareText, label: t.tab_prompt },
       { id: "live", icon: Film, label: t.tab_live },
@@ -131,16 +122,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       setStorageType={form.setStorageType}
                       onClearData={form.handleClearData}
                       setActiveTab={form.setActiveTab as any}
-                    />
-                  )}
-
-                  {tab.id === "providers" && (
-                    <ProvidersManager
-                      title={t.prov_mine}
-                      load={listProviders}
-                      onCreate={createProvider}
-                      onUpdate={updateProvider}
-                      onDelete={deleteProvider}
                     />
                   )}
 
