@@ -2,7 +2,6 @@ import { AspectRatioOption } from "../types";
 
 /**
  * Shared aspect ratio to pixel dimension mapping.
- * Used by hfService, giteeService, a4fService, and msService.
  */
 export const getBaseDimensions = (
   ratio: AspectRatioOption,
