@@ -76,7 +76,7 @@ export interface UserSettingsRepository {
   upsert(userId: number, configJson: string, secretsEncrypted: string | null): Promise<void>;
 }
 
-export type ProviderFormat = "openai" | "claude" | "gemini";
+export type ProviderFormat = "openai" | "claude" | "gemini" | "gradio";
 export type ProviderScope = "global" | "user";
 export type ProviderManagedBy = "admin" | "self";
 

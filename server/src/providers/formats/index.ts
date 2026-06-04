@@ -3,6 +3,7 @@ import { type FormatAdapter, type ImageParams } from "./shared";
 import { openaiAdapter } from "./openai";
 import { claudeAdapter } from "./claude";
 import { geminiAdapter } from "./gemini";
+import { gradioAdapter } from "./gradio";
 
 export type { FormatAdapter, ImageParams };
 
@@ -11,4 +12,5 @@ export const ADAPTERS: Record<ProviderFormat, FormatAdapter> = {
   openai: openaiAdapter,
   claude: claudeAdapter,
   gemini: geminiAdapter,
+  gradio: gradioAdapter,
 };
