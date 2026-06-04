@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { buildTestContext, seedUser } from "../testing/helpers";
-import { createSelfProvider, createGlobalProvider } from "../services/customProviders";
+import { createForUser, createGlobalProvider } from "../services/customProviders";
 import { dispatchGenerate, dispatchText } from "./index";
 
 const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body, text: async () => "" });
@@ -11,7 +11,7 @@ describe("generation dispatch — custom providers", () => {
   it("routes a custom OpenAI-format provider's model to the OpenAI adapter", async () => {
     const ctx = buildTestContext();
     const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
-    const p = await createSelfProvider(ctx, alice, {
+    const p = await createForUser(ctx, alice, {
       name: "Relay",
       apiUrl: "https://relay.example.com",
       format: "openai",
@@ -34,7 +34,7 @@ describe("generation dispatch — custom providers", () => {
     const ctx = buildTestContext();
     const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
     const bob = (await seedUser(ctx, { username: "bob", password: "pw" })).id;
-    const p = await createSelfProvider(ctx, alice, {
+    const p = await createForUser(ctx, alice, {
       name: "Relay", apiUrl: "https://relay", format: "openai",
       models: [{ modelId: "img-1", name: "Img", capabilities: ["image"] }], secret: "sk-1",
     });

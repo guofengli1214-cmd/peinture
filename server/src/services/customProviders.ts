@@ -130,11 +130,6 @@ async function create(
   return toPublic(rec, editable);
 }
 
-/** A user creates their own provider. */
-export function createSelfProvider(ctx: AppContext, userId: number, input: ProviderInput) {
-  return create(ctx, "user", userId, "self", input, true);
-}
-
 /** Admin creates a global (shared) provider. */
 export function createGlobalProvider(ctx: AppContext, input: ProviderInput) {
   return create(ctx, "global", null, "admin", input, true);
@@ -146,19 +141,6 @@ export function createForUser(ctx: AppContext, ownerUserId: number, input: Provi
 }
 
 // --- List ---
-
-function selfEditable(rec: CustomProviderRecord, userId: number): boolean {
-  return rec.managedBy === "self" && rec.ownerUserId === userId;
-}
-
-/** Everything a user can see: globals + their own (admin-assigned + self). */
-export async function listSelf(ctx: AppContext, userId: number): Promise<PublicProvider[]> {
-  const [globals, own] = await Promise.all([
-    ctx.repos.customProviders.listGlobal(),
-    ctx.repos.customProviders.listByOwner(userId),
-  ]);
-  return [...globals, ...own].map((r) => toPublic(r, selfEditable(r, userId)));
-}
 
 /** Admin: all global providers (editable). */
 export async function listGlobal(ctx: AppContext): Promise<PublicProvider[]> {
@@ -182,27 +164,6 @@ export async function effectiveForUser(ctx: AppContext, userId: number): Promise
 }
 
 // --- Update / delete ---
-
-export async function updateSelf(
-  ctx: AppContext,
-  userId: number,
-  id: string,
-  patch: ProviderPatch,
-): Promise<PublicProvider> {
-  const rec = await ctx.repos.customProviders.findById(id);
-  if (!rec) throw new Error("NOT_FOUND");
-  if (!selfEditable(rec, userId)) throw new Error("FORBIDDEN");
-  await ctx.repos.customProviders.update(id, patchToRepo(ctx, patch));
-  const updated = await ctx.repos.customProviders.findById(id);
-  return toPublic(updated!, true);
-}
-
-export async function deleteSelf(ctx: AppContext, userId: number, id: string): Promise<void> {
-  const rec = await ctx.repos.customProviders.findById(id);
-  if (!rec) throw new Error("NOT_FOUND");
-  if (!selfEditable(rec, userId)) throw new Error("FORBIDDEN");
-  await ctx.repos.customProviders.delete(id);
-}
 
 export async function adminUpdate(ctx: AppContext, id: string, patch: ProviderPatch): Promise<PublicProvider> {
   const rec = await ctx.repos.customProviders.findById(id);
