@@ -5,6 +5,8 @@ import { runMigrations } from "./db/migrate";
 import { createCrypto } from "./crypto";
 import { createMysqlRepositories } from "./repositories/mysql";
 import { bootstrapAdmin } from "./auth/bootstrap";
+import { seedGlobalProviders } from "./providers/seed";
+import { migrateRuntimeData } from "./providers/migrateData";
 import { createApp } from "./app";
 import type { AppContext } from "./context";
 
@@ -21,6 +23,10 @@ async function main(): Promise<void> {
   };
 
   await bootstrapAdmin(ctx);
+
+  const seeded = await seedGlobalProviders(ctx);
+  if (seeded > 0) console.log(`[seed] created ${seeded} global provider(s)`);
+  await migrateRuntimeData(ctx);
 
   const app = createApp(ctx);
   app.listen(config.port, () => {
