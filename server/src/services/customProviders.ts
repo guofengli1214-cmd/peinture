@@ -4,6 +4,7 @@ import type {
   ProviderFormat,
   UpdateCustomProviderInput,
 } from "../repositories/types";
+import type { Capability, ModelDef } from "../providers/formats/shared";
 
 /**
  * Custom / relay provider service.
@@ -18,13 +19,10 @@ import type {
  * `resolveForUse` server-side to get the decrypted key, after access checks.
  */
 
-export type Capability = "image" | "edit" | "text";
+export type { Capability };
 
-export interface ProviderModelDef {
-  modelId: string;
-  name: string;
-  capabilities: Capability[];
-}
+/** A provider's model definition (re-exported; gradio models carry a `gradio` block). */
+export type ProviderModelDef = ModelDef;
 
 export interface ProviderInput {
   name: string;

@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { ADAPTERS } from "./index";
+import type { AdapterContext, ModelDef } from "./shared";
 
 const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body, text: async () => "" });
 
 function lastCall(mock: ReturnType<typeof vi.fn>) {
   const [url, init] = mock.mock.calls[mock.mock.calls.length - 1];
   return { url, init, body: init?.body ? JSON.parse(init.body) : undefined, headers: init?.headers ?? {} };
+}
+
+/** Build an AdapterContext for a given endpoint/secret/model id. */
+function ctx(apiUrl: string, secret: string | null, modelId: string): AdapterContext {
+  const model: ModelDef = { modelId, name: modelId, capabilities: ["image"] };
+  return { apiUrl, secret, model };
 }
 
 describe("OpenAI format adapter", () => {
@@ -15,7 +22,7 @@ describe("OpenAI format adapter", () => {
     const fetchMock = vi.fn().mockResolvedValue(ok({ data: [{ url: "https://img/out.png" }] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await ADAPTERS.openai.generate("https://relay.example.com", "sk-x", "gpt-image-1", {
+    const res = await ADAPTERS.openai.generate!(ctx("https://relay.example.com", "sk-x", "gpt-image-1"), {
       prompt: "a cat",
       aspectRatio: "1:1",
     });
@@ -33,7 +40,7 @@ describe("OpenAI format adapter", () => {
     const fetchMock = vi.fn().mockResolvedValue(ok({ data: [{ b64_json: "QUJD" }] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await ADAPTERS.openai.generate("https://api.openai.com/v1", "sk-x", "m", {
+    const res = await ADAPTERS.openai.generate!(ctx("https://api.openai.com/v1", "sk-x", "m"), {
       prompt: "p",
       aspectRatio: "1:1",
     });
@@ -46,7 +53,7 @@ describe("OpenAI format adapter", () => {
     const fetchMock = vi.fn().mockResolvedValue(ok({ choices: [{ message: { content: "better prompt" } }] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const out = await ADAPTERS.openai.text("https://relay.example.com", "sk-x", "gpt-4o-mini", "cat", "SYS");
+    const out = await ADAPTERS.openai.text!(ctx("https://relay.example.com", "sk-x", "gpt-4o-mini"), "cat", "SYS");
 
     expect(out).toBe("better prompt");
     const c = lastCall(fetchMock);
@@ -63,7 +70,7 @@ describe("Claude format adapter", () => {
     const fetchMock = vi.fn().mockResolvedValue(ok({ content: [{ type: "text", text: "claude says hi" }] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const out = await ADAPTERS.claude.text("https://api.anthropic.com", "ak-1", "claude-x", "cat", "SYS");
+    const out = await ADAPTERS.claude.text!(ctx("https://api.anthropic.com", "ak-1", "claude-x"), "cat", "SYS");
 
     expect(out).toBe("claude says hi");
     const c = lastCall(fetchMock);
@@ -73,9 +80,9 @@ describe("Claude format adapter", () => {
     expect(c.body.system).toContain("SYS");
   });
 
-  it("generate/edit are unsupported", async () => {
+  it("generate is unsupported", async () => {
     await expect(
-      ADAPTERS.claude.generate("https://api.anthropic.com", "ak-1", "m", { prompt: "x", aspectRatio: "1:1" }),
+      ADAPTERS.claude.generate!(ctx("https://api.anthropic.com", "ak-1", "m"), { prompt: "x", aspectRatio: "1:1" }),
     ).rejects.toThrow("format_no_image");
   });
 });
@@ -89,7 +96,7 @@ describe("Gemini format adapter", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await ADAPTERS.gemini.generate("https://generativelanguage.googleapis.com", "gk-1", "gemini-img", {
+    const res = await ADAPTERS.gemini.generate!(ctx("https://generativelanguage.googleapis.com", "gk-1", "gemini-img"), {
       prompt: "a cat",
       aspectRatio: "1:1",
     });
@@ -106,7 +113,7 @@ describe("Gemini format adapter", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const out = await ADAPTERS.gemini.text("https://generativelanguage.googleapis.com", "gk-1", "gemini-pro", "cat", "SYS");
+    const out = await ADAPTERS.gemini.text!(ctx("https://generativelanguage.googleapis.com", "gk-1", "gemini-pro"), "cat", "SYS");
     expect(out).toBe("gemini text");
   });
 });

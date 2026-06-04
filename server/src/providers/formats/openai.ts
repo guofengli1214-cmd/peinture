@@ -1,5 +1,13 @@
 import { fetchWithRetry } from "../http";
-import { type FormatAdapter, type ImageParams, getDimensions, trimBase, errText } from "./shared";
+import {
+  type FormatAdapter,
+  type AdapterContext,
+  type ImageParams,
+  type EditOpts,
+  getDimensions,
+  trimBase,
+  errText,
+} from "./shared";
 
 /** Build an OpenAI-style URL, tolerating a base that already ends with /v1. */
 function v1(base: string, sub: string): string {
@@ -20,38 +28,38 @@ async function parseImageResponse(res: Response): Promise<{ url: string }> {
 }
 
 export const openaiAdapter: FormatAdapter = {
-  async generate(base, key, modelId, params: ImageParams) {
+  async generate(c: AdapterContext, params: ImageParams) {
     const { width, height } = getDimensions(params.aspectRatio, params.enableHD ?? false);
-    const res = await fetchWithRetry(v1(base, "/images/generations"), {
+    const res = await fetchWithRetry(v1(c.apiUrl, "/images/generations"), {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders(key) },
-      body: JSON.stringify({ model: modelId, prompt: params.prompt, size: `${width}x${height}`, n: 1 }),
+      headers: { "Content-Type": "application/json", ...authHeaders(c.secret) },
+      body: JSON.stringify({ model: c.model.modelId, prompt: params.prompt, size: `${width}x${height}`, n: 1 }),
     });
     if (!res.ok) throw new Error(await errText(res));
     return parseImageResponse(res);
   },
 
-  async edit(base, key, modelId, images, prompt, opts) {
+  async edit(c: AdapterContext, images: Blob[], prompt: string, opts: EditOpts) {
     const form = new FormData();
-    form.append("model", modelId);
+    form.append("model", c.model.modelId);
     form.append("prompt", prompt);
     if (opts.width && opts.height) form.append("size", `${opts.width}x${opts.height}`);
     images.forEach((b) => form.append("image", b));
-    const res = await fetchWithRetry(v1(base, "/images/edits"), {
+    const res = await fetchWithRetry(v1(c.apiUrl, "/images/edits"), {
       method: "POST",
-      headers: { ...authHeaders(key) }, // let fetch set multipart boundary
+      headers: { ...authHeaders(c.secret) }, // let fetch set multipart boundary
       body: form,
     });
     if (!res.ok) throw new Error(await errText(res));
     return parseImageResponse(res);
   },
 
-  async text(base, key, modelId, prompt, systemPrompt) {
-    const res = await fetchWithRetry(v1(base, "/chat/completions"), {
+  async text(c: AdapterContext, prompt: string, systemPrompt: string) {
+    const res = await fetchWithRetry(v1(c.apiUrl, "/chat/completions"), {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders(key) },
+      headers: { "Content-Type": "application/json", ...authHeaders(c.secret) },
       body: JSON.stringify({
-        model: modelId,
+        model: c.model.modelId,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },

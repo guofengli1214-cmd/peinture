@@ -46,7 +46,8 @@ export async function dispatchGenerate(
   if (isBuiltin(provider)) throw new Error("provider_not_supported");
 
   const cp = await resolveForUse(ctx, userId, provider);
-  const { url } = await ADAPTERS[cp.format].generate(cp.apiUrl, cp.secret, modelId, params);
+  const model = cp.models.find((m) => m.modelId === modelId) ?? { modelId, name: modelId, capabilities: [] };
+  const { url } = await ADAPTERS[cp.format].generate!({ apiUrl: cp.apiUrl, secret: cp.secret, model }, params);
   return { id: crypto.randomUUID(), url, seed: params.seed, steps: params.steps, guidance: params.guidance };
 }
 
@@ -63,7 +64,8 @@ export async function dispatchEdit(
   if (isBuiltin(provider)) throw new Error("provider_not_supported");
 
   const cp = await resolveForUse(ctx, userId, provider);
-  const { url } = await ADAPTERS[cp.format].edit(cp.apiUrl, cp.secret, modelId, images, prompt, opts);
+  const model = cp.models.find((m) => m.modelId === modelId) ?? { modelId, name: modelId, capabilities: [] };
+  const { url } = await ADAPTERS[cp.format].edit!({ apiUrl: cp.apiUrl, secret: cp.secret, model }, images, prompt, opts);
   return { id: crypto.randomUUID(), url };
 }
 
@@ -79,7 +81,8 @@ export async function dispatchText(
   if (isBuiltin(provider)) throw new Error("provider_not_supported");
 
   const cp = await resolveForUse(ctx, userId, provider);
-  return ADAPTERS[cp.format].text(cp.apiUrl, cp.secret, modelId, prompt, systemPrompt);
+  const model = cp.models.find((m) => m.modelId === modelId) ?? { modelId, name: modelId, capabilities: [] };
+  return ADAPTERS[cp.format].text!({ apiUrl: cp.apiUrl, secret: cp.secret, model }, prompt, systemPrompt);
 }
 
 /** HD upscale — HuggingFace only (RealESRGAN). */

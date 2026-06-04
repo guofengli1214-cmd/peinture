@@ -89,12 +89,14 @@ export function toClientModels(models: RegistryModel[]): ClientModel[] {
   }));
 }
 
-export type ModelCapability = "image" | "edit" | "text";
+export type ModelCapability = "image" | "edit" | "text" | "video" | "upscale";
 
 const CAP_TO_TYPE: Record<ModelCapability, ModelType> = {
   image: "text2image",
   edit: "image2image",
   text: "text2text",
+  video: "image2video",
+  upscale: "upscaler",
 };
 
 /**
