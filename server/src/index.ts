@@ -25,6 +25,7 @@ async function main(): Promise<void> {
   await bootstrapAdmin(ctx);
 
   const seeded = await seedGlobalProviders(ctx);
+  // eslint-disable-next-line no-console
   if (seeded > 0) console.log(`[seed] created ${seeded} global provider(s)`);
   await migrateRuntimeData(ctx);
 
