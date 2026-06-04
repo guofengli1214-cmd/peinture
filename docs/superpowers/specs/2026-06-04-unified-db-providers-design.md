@@ -16,6 +16,7 @@
 2. **连 HF 也全表单可编辑**：HuggingFace 的 Gradio 底层参数（地址、fn_index、参数数组模板、输出路径）全部可在 admin 界面编辑，并可可视化新增任意 Gradio Space。
 3. **彻底移除浏览器直连**：删除 `local/hydration` 模式、`services/` 6 个直连服务、`constants.ts` 写死映射，只走 server。
 4. **seed 现有配置**：HF 9 模型、OpenAI/Google 默认端点、gitee/modelscope/a4f 的地址与模型，作为初始数据写进数据库（admin 可改可删）。
+5. **迁移现有真实数据**：把运行中已配置的真实 per-user token / 自定义接口迁移到新的全局配置，不丢失（见 §13）。
 
 ## 3. 现状（已核实代码）
 
@@ -114,6 +115,8 @@
   3. `OpenAI`（openai）、4. `Google`（gemini）、5. `Gitee AI`（openai）、6. `ModelScope`（openai）、7. `A4F`（openai）。
 - seed 数据集中在 `server/src/providers/seed.ts`（TS 常量），repository 提供 `findGlobalByName` 以判断幂等。
 
+> 注：seed 只建默认记录并留空 `secret`；运行中已存在的真实 Key/接口由 §13 迁移补入。
+
 ## 8. 前端 + admin 界面改动
 
 - **`ProvidersManager` 增强**：`format` 选择含 `gradio`；
@@ -145,7 +148,7 @@
 每阶段结束应可测、可回滚。
 
 - **阶段 1 — 后端引擎**：扩展 `FormatAdapter`（可选方法 + video/upscale）、新增 `gradio` 适配器与模板渲染、重构 `dispatch` 统一走 ADAPTERS、按 capability 路由。单测：`gradio` 模板渲染 + 各能力 dispatch。
-- **阶段 2 — seed + migration**：`003` migration、`seed.ts`、bootstrap 幂等插入、`findGlobalByName`。验证 server 模式下 HF/openai 等可生成。
+- **阶段 2 — seed + migration + 数据迁移**：`003` migration、`seed.ts`、bootstrap 幂等插入、`findGlobalByName`；执行 §13 现有运行时数据迁移（per-user token/接口 → 全局）。验证 server 模式下可生成、且原有 Key 已就位。
 - **阶段 3 — admin 界面**：`ProvidersManager` 支持 gradio 全表单；`AdminView` 移除 per-user 配置与路由。
 - **阶段 4 — 前端统一 server + 移除直连**：锁定 `serviceMode`、删 6 个直连 service、精简 `constants`、模型选择走动态、清 `local/hydration` 分支。
 - **阶段 5 — 清理 + 测试**：移除死代码、前后端 `npm test` 全绿、手动验证（见 §12）。
@@ -156,6 +159,37 @@
 - 手动（管理员）：在唯一的「全局接口」面板增删改 4 种格式的 provider；新增一个 gradio 模型并成功生成；改 HF 某 Space 地址即时生效。
 - 手动（普通用户）：设置里只有「模型」选择、无任何 API 配置入口；能选到 admin 配的全部模型并成功生成/编辑/放大/视频/提示词优化；浏览器网络面板确认**不存在**对 hf.space / api.openai.com 等的直连请求（全部经 `/api/v1/*`）。
 - 安全：普通用户调 `/api/admin/*` 与已删除的直连路径均被拒。
+
+## 13. 现有运行时数据迁移
+
+**目标**：升级后不丢失任何已配置的真实 Key 与自定义接口。迁移作为 §7 seed 之后的一次性、幂等步骤运行。
+
+### 13.1 勘察（迁移实现第 0 步）
+
+统计现有数据规模与形态，用于核对迁移结果：
+- `user_settings.secrets_encrypted` 中各 provider 的非空 `tokens`、`customProviderTokens`，以及 `openaiConfig/googleConfig` 的覆盖值；
+- `custom_providers` 现有的 global 与 user-scope 记录数。
+
+### 13.2 内置 provider token → 全局 provider secret
+
+- 对 gitee/modelscope/a4f/openai/google/huggingface：收集**所有用户**该 provider 的非空 token，去重后以逗号拼接，写入对应 seed 全局 provider 的 `secret_encrypted`——天然复用 §6 的多 key 轮换；admin 之后可在面板精简。HF 无 token 则留空。
+- `openaiConfig/googleConfig` 的 `apiUrl/modelId` 覆盖：优先取 **admin 用户**的值（admin 未改则取任一非默认值）写入对应全局 provider 的 `apiUrl` 与默认模型；无则保留 §7 的 seed 默认。
+
+### 13.3 现有 custom_providers
+
+- **global 记录**：原样保留（本就是目标形态）。
+- **user-scope 记录**（managed_by admin/self）：默认**保留可用**（owner 仍可生成，`resolveForUse` 逻辑不变），迁移**不**自动转 global——避免把某用户私有 Key 暴露给全员。在全局面板中以"遗留的按用户接口"列出，供管理员手动**提升为 global** 或删除。
+- 旧 `format`（openai/claude/gemini）不变，无需转换。
+
+### 13.4 形式与幂等
+
+- 实现为 migration 之后的一次性数据迁移（`server/src/db/migrateData.ts` 或 bootstrap 钩子），用标记（迁移记录或 provider 注记）保证只执行一次、可重入安全。
+- 迁移**只新增/补全**全局 provider 的 `secret/apiUrl`，**不删除**任何旧数据行；§9 移除代码后，旧 per-user token 字段不再被读取，但数据保留，便于回滚与核对。
+
+### 13.5 验证
+
+- 迁移后，每个原先有人配过 Key 的 provider，其全局记录 `secret` 非空且能成功生成。
+- 抽查：原 user-scope 自定义接口其 owner 仍可用。
 
 ## 附录 A：seed 数据（从现有代码提取的确切值）
 
