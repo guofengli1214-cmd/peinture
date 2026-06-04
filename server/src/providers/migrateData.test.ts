@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildTestContext, seedUser } from "../testing/helpers";
+import { buildTestContext, seedUser, seedUserTokens } from "../testing/helpers";
 import { seedGlobalProviders } from "./seed";
-import { applyAdminUpdate } from "../services/userConfig";
 import { listGlobal, resolveForUse } from "../services/customProviders";
 import { migrateRuntimeData } from "./migrateData";
 
@@ -13,8 +12,8 @@ describe("migrateRuntimeData", () => {
     const bob = (await seedUser(ctx, { username: "bob", password: "pw" })).id;
 
     // Admin had set per-user gitee tokens (alice has two, bob shares one with alice).
-    await applyAdminUpdate(ctx, alice, { tokens: { gitee: "k1,k2" } });
-    await applyAdminUpdate(ctx, bob, { tokens: { gitee: "k2,k3" } });
+    await seedUserTokens(ctx, alice, { gitee: "k1,k2" });
+    await seedUserTokens(ctx, bob, { gitee: "k2,k3" });
 
     await migrateRuntimeData(ctx);
 
@@ -29,7 +28,7 @@ describe("migrateRuntimeData", () => {
     const ctx = buildTestContext();
     await seedGlobalProviders(ctx);
     const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
-    await applyAdminUpdate(ctx, alice, { tokens: { gitee: "user-key" } });
+    await seedUserTokens(ctx, alice, { gitee: "user-key" });
 
     const gitee0 = (await listGlobal(ctx)).find((g) => g.name === "Gitee AI")!;
     const { adminUpdate } = await import("../services/customProviders");

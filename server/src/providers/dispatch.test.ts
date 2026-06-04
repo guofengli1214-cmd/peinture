@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { buildTestContext, seedUser } from "../testing/helpers";
-import { createForUser, createGlobalProvider } from "../services/customProviders";
+import { buildTestContext, seedUser, seedUserProvider } from "../testing/helpers";
+import { createGlobalProvider } from "../services/customProviders";
 import { dispatchGenerate, dispatchText } from "./index";
 
 vi.mock("./gradio", () => ({
@@ -17,7 +17,7 @@ describe("generation dispatch — custom providers", () => {
   it("routes a custom OpenAI-format provider's model to the OpenAI adapter", async () => {
     const ctx = buildTestContext();
     const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
-    const p = await createForUser(ctx, alice, {
+    const providerId = await seedUserProvider(ctx, alice, {
       name: "Relay",
       apiUrl: "https://relay.example.com",
       format: "openai",
@@ -28,7 +28,7 @@ describe("generation dispatch — custom providers", () => {
     const fetchMock = vi.fn().mockResolvedValue(ok({ data: [{ url: "https://img/out.png" }] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await dispatchGenerate(ctx, alice, `${p.id}:img-1`, { prompt: "a cat", aspectRatio: "1:1" });
+    const res = await dispatchGenerate(ctx, alice, `${providerId}:img-1`, { prompt: "a cat", aspectRatio: "1:1" });
 
     expect(res.url).toBe("https://img/out.png");
     expect(fetchMock.mock.calls[0][0]).toBe("https://relay.example.com/v1/images/generations");
@@ -40,13 +40,13 @@ describe("generation dispatch — custom providers", () => {
     const ctx = buildTestContext();
     const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
     const bob = (await seedUser(ctx, { username: "bob", password: "pw" })).id;
-    const p = await createForUser(ctx, alice, {
+    const providerId = await seedUserProvider(ctx, alice, {
       name: "Relay", apiUrl: "https://relay", format: "openai",
       models: [{ modelId: "img-1", name: "Img", capabilities: ["image"] }], secret: "sk-1",
     });
 
     await expect(
-      dispatchGenerate(ctx, bob, `${p.id}:img-1`, { prompt: "x", aspectRatio: "1:1" }),
+      dispatchGenerate(ctx, bob, `${providerId}:img-1`, { prompt: "x", aspectRatio: "1:1" }),
     ).rejects.toThrow("PROVIDER_NOT_AVAILABLE");
   });
 

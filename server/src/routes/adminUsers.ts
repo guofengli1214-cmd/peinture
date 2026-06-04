@@ -5,7 +5,6 @@ import { createAuthMiddleware } from "../auth/middleware";
 import { createUserAccount } from "../services/userAccounts";
 import { hashPassword } from "../auth/passwords";
 import { revokeUserSessions } from "../auth/sessions";
-import { getPublicConfig, applyAdminUpdate } from "../services/userConfig";
 import type { UserRecord } from "../repositories/types";
 
 function toAdminUserView(u: UserRecord) {
@@ -120,25 +119,6 @@ export function createAdminRouter(ctx: AppContext): Router {
     await revokeUserSessions(ctx.repos, id);
     await ctx.repos.users.delete(id);
     res.json({ ok: true });
-  });
-
-  router.get("/users/:id/config", async (req, res) => {
-    const id = parseId(req.params.id);
-    if (id === null || !(await ctx.repos.users.findById(id))) {
-      res.status(404).json({ error: "not_found" });
-      return;
-    }
-    res.json({ config: await getPublicConfig(ctx, id) });
-  });
-
-  router.put("/users/:id/config", async (req, res) => {
-    const id = parseId(req.params.id);
-    if (id === null || !(await ctx.repos.users.findById(id))) {
-      res.status(404).json({ error: "not_found" });
-      return;
-    }
-    const config = await applyAdminUpdate(ctx, id, (req.body ?? {}) as Record<string, unknown>);
-    res.json({ config });
   });
 
   return router;

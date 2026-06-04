@@ -133,23 +133,12 @@ export function createGlobalProvider(ctx: AppContext, input: ProviderInput) {
   return create(ctx, "global", null, "admin", input, true);
 }
 
-/** Admin creates a provider assigned to a specific user (read-only to that user). */
-export function createForUser(ctx: AppContext, ownerUserId: number, input: ProviderInput) {
-  return create(ctx, "user", ownerUserId, "admin", input, true);
-}
-
 // --- List ---
 
 /** Admin: all global providers (editable). */
 export async function listGlobal(ctx: AppContext): Promise<PublicProvider[]> {
   const globals = await ctx.repos.customProviders.listGlobal();
   return globals.map((r) => toPublic(r, true));
-}
-
-/** Admin: a specific user's user-scoped providers (editable). */
-export async function listForUser(ctx: AppContext, userId: number): Promise<PublicProvider[]> {
-  const own = await ctx.repos.customProviders.listByOwner(userId);
-  return own.map((r) => toPublic(r, true));
 }
 
 /** Enabled providers usable by a user, for model aggregation (records, not public view). */

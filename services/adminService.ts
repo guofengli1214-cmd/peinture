@@ -1,4 +1,4 @@
-import { AdminUser, UserRole, ServerPublicConfig, ProviderId } from "../types";
+import { AdminUser, UserRole } from "../types";
 
 /**
  * Admin API client for /api/admin/*. All calls send the session cookie and
@@ -31,15 +31,6 @@ export interface UpdateUserInput {
   isActive?: boolean;
   displayName?: string | null;
   password?: string;
-}
-
-/** Admin config patch: any config field, plus tokens/custom-provider tokens. */
-export interface AdminConfigPatch {
-  tokens?: Partial<Record<ProviderId, string | string[]>>;
-  openaiConfig?: { apiUrl: string; modelId: string };
-  googleConfig?: { apiUrl: string; modelId: string };
-  serviceMode?: string;
-  [key: string]: unknown;
 }
 
 export const listUsers = async (): Promise<AdminUser[]> => {
@@ -82,28 +73,4 @@ export const deleteUser = async (id: number): Promise<void> => {
     credentials: "include",
   });
   if (!response.ok) await parseError(response, "delete_user_failed");
-};
-
-export const getUserConfig = async (id: number): Promise<ServerPublicConfig> => {
-  const response = await fetch(`/api/admin/users/${id}/config`, {
-    credentials: "include",
-  });
-  if (!response.ok) await parseError(response, "get_config_failed");
-  const { config } = await response.json();
-  return config as ServerPublicConfig;
-};
-
-export const updateUserConfig = async (
-  id: number,
-  patch: AdminConfigPatch,
-): Promise<ServerPublicConfig> => {
-  const response = await fetch(`/api/admin/users/${id}/config`, {
-    method: "PUT",
-    credentials: "include",
-    headers: JSON_HEADERS,
-    body: JSON.stringify(patch),
-  });
-  if (!response.ok) await parseError(response, "update_config_failed");
-  const { config } = await response.json();
-  return config as ServerPublicConfig;
 };

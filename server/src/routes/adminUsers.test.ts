@@ -56,23 +56,6 @@ describe("admin user routes", () => {
     expect(res.status).toBe(409);
   });
 
-  it("lets an admin assign a user's tokens; the user sees only a hasTokens flag", async () => {
-    const { ctx, app } = await setup();
-    const admin = await agentFor(app, "boss");
-    const alice = (await ctx.repos.users.findByUsername("alice"))!;
-
-    const put = await admin
-      .put(`/api/admin/users/${alice.id}/config`)
-      .send({ tokens: { huggingface: "hf_admin_assigned" } });
-    expect(put.status).toBe(200);
-    expect(JSON.stringify(put.body)).not.toContain("hf_admin_assigned");
-
-    const aliceAgent = await agentFor(app, "alice");
-    const cfg = await aliceAgent.get("/api/config");
-    expect(cfg.body.config.hasTokens.huggingface).toBe(true);
-    expect(JSON.stringify(cfg.body)).not.toContain("hf_admin_assigned");
-  });
-
   it("deactivating a user revokes their active sessions", async () => {
     const { ctx, app } = await setup();
     const admin = await agentFor(app, "boss");

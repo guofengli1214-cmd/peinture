@@ -4,8 +4,6 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  getUserConfig,
-  updateUserConfig,
 } from "../services/adminService";
 
 const adminUser = {
@@ -86,30 +84,5 @@ describe("adminService", () => {
     expect(url).toBe("/api/admin/users/2");
     expect(init.method).toBe("DELETE");
     expect(init.credentials).toBe("include");
-  });
-
-  it("getUserConfig GETs the user's config", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(okJson({ config: { language: "en" } }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const cfg = await getUserConfig(2);
-
-    expect(cfg).toEqual({ language: "en" });
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/admin/users/2/config");
-  });
-
-  it("updateUserConfig PUTs the patch and returns the merged config", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      okJson({ config: { hasTokens: { huggingface: true } } }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const cfg = await updateUserConfig(2, { tokens: { huggingface: "abc" } });
-
-    expect(cfg.hasTokens.huggingface).toBe(true);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("/api/admin/users/2/config");
-    expect(init.method).toBe("PUT");
-    expect(JSON.parse(init.body)).toEqual({ tokens: { huggingface: "abc" } });
   });
 });

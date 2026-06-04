@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTestContext, seedUser } from "../testing/helpers";
-import { applyAdminUpdate } from "../services/userConfig";
+import { buildTestContext, seedUser, seedUserTokens } from "../testing/helpers";
 import { seedGlobalProviders } from "./seed";
 import { migrateRuntimeData } from "./migrateData";
 import { listGlobal, resolveForUse } from "../services/customProviders";
@@ -10,7 +9,7 @@ describe("startup seed + migrate sequence", () => {
   it("seeds providers then migrates existing tokens, end to end", async () => {
     const ctx = buildTestContext();
     const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
-    await applyAdminUpdate(ctx, alice, { tokens: { openai: "sk-real" } });
+    await seedUserTokens(ctx, alice, { openai: "sk-real" });
 
     await seedGlobalProviders(ctx);
     await migrateRuntimeData(ctx);

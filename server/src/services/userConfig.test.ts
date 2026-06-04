@@ -2,11 +2,15 @@ import { describe, it, expect } from "vitest";
 import {
   getPublicConfig,
   applySelfUpdate,
-  applyAdminUpdate,
   getProviderTokens,
   getCustomProviderWithToken,
 } from "./userConfig";
-import { buildTestContext, seedUser } from "../testing/helpers";
+import {
+  buildTestContext,
+  seedUser,
+  seedUserTokens,
+  seedUserCustomProvider,
+} from "../testing/helpers";
 import type { AppContext } from "../context";
 
 async function ctxWithUser() {
@@ -32,16 +36,16 @@ describe("userConfig", () => {
 
   it("persists secrets encrypted at rest", async () => {
     const { ctx, userId } = await ctxWithUser();
-    await applyAdminUpdate(ctx, userId, { tokens: { huggingface: "hf_secret_123" } });
+    await seedUserTokens(ctx, userId, { huggingface: "hf_secret_123" });
     const row = await ctx.repos.settings.get(userId);
     expect(row?.secretsEncrypted).toBeTruthy();
     expect(row?.secretsEncrypted).toContain("enc:");
     expect(row?.secretsEncrypted).not.toContain("hf_secret_123");
   });
 
-  it("admin can set provider tokens; public view exposes only a hasTokens flag, never the raw token", async () => {
+  it("provider tokens are exposed only as a hasTokens flag, never as the raw token", async () => {
     const { ctx, userId } = await ctxWithUser();
-    await applyAdminUpdate(ctx, userId, { tokens: { huggingface: "hf_secret_123, hf_secret_456" } });
+    await seedUserTokens(ctx, userId, { huggingface: "hf_secret_123, hf_secret_456" });
 
     const cfg = await getPublicConfig(ctx, userId);
     expect(cfg.hasTokens.huggingface).toBe(true);
@@ -56,7 +60,7 @@ describe("userConfig", () => {
 
   it("a normal user's self-update cannot change admin-locked tokens but can change prefs", async () => {
     const { ctx, userId } = await ctxWithUser();
-    await applyAdminUpdate(ctx, userId, { tokens: { huggingface: "hf_locked" } });
+    await seedUserTokens(ctx, userId, { huggingface: "hf_locked" });
 
     await applySelfUpdate(ctx, userId, {
       language: "zh",
@@ -79,13 +83,14 @@ describe("userConfig", () => {
     expect(cfg.s3Config.accessKeyId).toBe("AKIA");
   });
 
-  it("admin can set a custom provider with a token; public view hides the token, proxy can read it", async () => {
+  it("a custom provider token is hidden in the public view but readable by the proxy", async () => {
     const { ctx, userId } = await ctxWithUser();
-    await applyAdminUpdate(ctx, userId, {
-      customProviders: [
-        { id: "p1", name: "MyServer", apiUrl: "https://x/api", token: "cp_secret", models: {}, enabled: true },
-      ],
-    });
+    await seedUserCustomProvider(
+      ctx,
+      userId,
+      { id: "p1", name: "MyServer", apiUrl: "https://x/api", models: {}, enabled: true },
+      "cp_secret",
+    );
 
     const cfg = await getPublicConfig(ctx, userId);
     expect(cfg.customProviders[0].name).toBe("MyServer");
@@ -97,10 +102,10 @@ describe("userConfig", () => {
     expect(withToken?.token).toBe("cp_secret");
   });
 
-  it("admin token update preserves other providers' tokens when omitted", async () => {
+  it("token update preserves other providers' tokens when omitted", async () => {
     const { ctx, userId } = await ctxWithUser();
-    await applyAdminUpdate(ctx, userId, { tokens: { huggingface: "hf_x", gitee: "gi_y" } });
-    await applyAdminUpdate(ctx, userId, { tokens: { huggingface: "hf_z" } });
+    await seedUserTokens(ctx, userId, { huggingface: "hf_x", gitee: "gi_y" });
+    await seedUserTokens(ctx, userId, { huggingface: "hf_z" });
     expect(await getProviderTokens(ctx, userId, "huggingface")).toEqual(["hf_z"]);
     expect(await getProviderTokens(ctx, userId, "gitee")).toEqual(["gi_y"]);
   });

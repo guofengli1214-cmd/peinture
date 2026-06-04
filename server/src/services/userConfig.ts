@@ -174,19 +174,6 @@ const SELF_EDITABLE_KEYS: (keyof UserConfig)[] = [
   "videoSettings",
 ];
 
-function normalizeTokenList(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.map((v) => String(v).trim()).filter((v) => v.length > 0);
-  }
-  if (typeof value === "string") {
-    return value
-      .split(/[,\n]/)
-      .map((v) => v.trim())
-      .filter((v) => v.length > 0);
-  }
-  return [];
-}
-
 // --- Persistence ---
 
 export interface RawConfig {
@@ -273,78 +260,6 @@ export async function applySelfUpdate(
   // Storage credentials are the user's own.
   if (patch.s3Config !== undefined) secrets.s3Config = patch.s3Config as S3Config;
   if (patch.webdavConfig !== undefined) secrets.webdavConfig = patch.webdavConfig as WebDAVConfig;
-
-  await saveRaw(ctx, userId, config, secrets);
-  return toPublicConfig(config, secrets);
-}
-
-export interface AdminConfigPatch extends Partial<UserConfig> {
-  /** provider -> token string ("a,b") or string[]; omitted providers keep existing. */
-  tokens?: Partial<Record<ProviderId, string | string[]>>;
-  /** Full custom-provider list; each may carry a `token` to (re)assign. */
-  customProviders?: Array<CustomProviderMeta & { token?: string }>;
-  s3Config?: S3Config;
-  webdavConfig?: WebDAVConfig;
-}
-
-export async function applyAdminUpdate(
-  ctx: AppContext,
-  userId: number,
-  patch: AdminConfigPatch,
-): Promise<PublicConfig> {
-  const { config, secrets } = await loadRaw(ctx, userId);
-
-  // Plain config keys (admin may set any of them, including locked ones).
-  const configKeys: (keyof UserConfig)[] = [
-    "language",
-    "provider",
-    "model",
-    "aspectRatio",
-    "seed",
-    "steps",
-    "guidanceScale",
-    "autoTranslate",
-    "enableHD",
-    "serviceMode",
-    "storageType",
-    "systemPrompt",
-    "translationPrompt",
-    "editModelConfig",
-    "liveModelConfig",
-    "textModelConfig",
-    "upscalerModelConfig",
-    "openaiConfig",
-    "googleConfig",
-    "videoSettings",
-  ];
-  for (const key of configKeys) {
-    if (patch[key] !== undefined) {
-      (config as unknown as Record<string, unknown>)[key] = patch[key];
-    }
-  }
-
-  if (patch.tokens) {
-    for (const id of PROVIDER_IDS) {
-      if (patch.tokens[id] !== undefined) {
-        secrets.tokens[id] = normalizeTokenList(patch.tokens[id]);
-      }
-    }
-  }
-
-  if (patch.customProviders) {
-    const nextTokens: Record<string, string> = {};
-    config.customProviders = patch.customProviders.map((p) => {
-      const { token, ...meta } = p;
-      // Keep an existing token if the admin didn't send a new one.
-      const resolved = token !== undefined ? token : secrets.customProviderTokens[p.id];
-      if (resolved) nextTokens[p.id] = resolved;
-      return meta;
-    });
-    secrets.customProviderTokens = nextTokens;
-  }
-
-  if (patch.s3Config !== undefined) secrets.s3Config = patch.s3Config;
-  if (patch.webdavConfig !== undefined) secrets.webdavConfig = patch.webdavConfig;
 
   await saveRaw(ctx, userId, config, secrets);
   return toPublicConfig(config, secrets);
