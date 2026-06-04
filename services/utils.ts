@@ -25,13 +25,12 @@ export const getBeijingDateString = () => {
 };
 
 // --- Service Mode Management ---
+// serviceMode is permanently "server"; getServiceMode is kept as the single
+// read accessor used by the generation hooks (its branches collapse in later
+// tasks). There is no setter: the mode can no longer be changed.
 
 export const getServiceMode = (): ServiceMode => {
   return useConfigStore.getState().serviceMode;
-};
-
-export const saveServiceMode = (mode: ServiceMode) => {
-  useConfigStore.getState().setServiceMode(mode);
 };
 
 // --- System Prompt Management ---

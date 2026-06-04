@@ -3,24 +3,9 @@ import { Layers, Film, Plus, Brain } from "lucide-react";
 import { Select, OptionGroup } from "../Select";
 import { useSettingsStore } from "../../store/settingsStore";
 import { translations } from "../../translations";
-import { ServiceMode, UnifiedModelOption, CustomProvider } from "../../types";
-import {
-  EDIT_MODELS,
-  LIVE_MODELS,
-  TEXT_MODELS,
-  UPSCALER_MODELS,
-} from "../../constants";
-import { useConfigStore } from "../../store/configStore";
+import { CustomProvider } from "../../types";
 
 interface ModelsTabProps {
-  serviceMode: ServiceMode;
-  giteeToken: string;
-  msToken: string;
-  a4fToken: string;
-  openaiToken: string;
-  googleToken: string;
-  openaiConfig: { apiUrl: string; modelId: string };
-  googleConfig: { apiUrl: string; modelId: string };
   customProviders: CustomProvider[];
   editModelValue: string;
   setEditModelValue: (v: string) => void;
@@ -36,92 +21,25 @@ export const ModelsTab: React.FC<ModelsTabProps> = (props) => {
   const { language } = useSettingsStore();
   const t = translations[language];
 
-  const cleanLabel = (label: string) => {
-    return label
-      .replace(/\s*\(HF\)$/, "")
-      .replace(/\s*\(Gitee\)$/, "")
-      .replace(/\s*\(MS\)$/, "");
-  };
-
-  const toPascalCaseWithSpace = (str: string) => {
-    if (!str) return "";
-    return str
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
-
+  // serviceMode is permanently "server": model options come only from the
+  // (admin-assigned) custom providers, grouped by capability.
   const getAvailableModelGroups = (
-    baseList: UnifiedModelOption[],
     type: "generate" | "edit" | "video" | "text" | "upscaler",
   ): OptionGroup[] => {
     const groups: OptionGroup[] = [];
-    const isServer = props.serviceMode === "server";
-    const isLocal = props.serviceMode === "local";
-    const isHydration = props.serviceMode === "hydration";
 
-    if (isLocal || isHydration) {
-      const hfOptions = baseList
-        .filter((m) => m.provider === "huggingface")
-        .map((m) => ({ value: m.value, label: cleanLabel(m.label) }));
-      if (hfOptions.length > 0)
-        groups.push({ label: t.provider_huggingface, options: hfOptions });
-
-      if (props.giteeToken || useConfigStore.getState().tokens.gitee?.length > 0) {
-        const giteeOptions = baseList
-          .filter((m) => m.provider === "gitee")
-          .map((m) => ({ value: m.value, label: cleanLabel(m.label) }));
-        if (giteeOptions.length > 0)
-          groups.push({ label: t.provider_gitee, options: giteeOptions });
+    props.customProviders.forEach((cp) => {
+      const models = cp.models[type];
+      if (models && models.length > 0) {
+        groups.push({
+          label: cp.name,
+          options: models.map((m) => ({
+            label: m.name,
+            value: `${cp.id}:${m.id}`,
+          })),
+        });
       }
-
-      if (props.msToken || useConfigStore.getState().tokens.modelscope?.length > 0) {
-        const msOptions = baseList
-          .filter((m) => m.provider === "modelscope")
-          .map((m) => ({ value: m.value, label: cleanLabel(m.label) }));
-        if (msOptions.length > 0)
-          groups.push({ label: t.provider_modelscope, options: msOptions });
-      }
-
-      if (props.a4fToken || useConfigStore.getState().tokens.a4f?.length > 0) {
-        const a4fOptions = baseList
-          .filter((m) => m.provider === "a4f")
-          .map((m) => ({ value: m.value, label: cleanLabel(m.label) }));
-        if (a4fOptions.length > 0)
-          groups.push({ label: t.provider_a4f || "A4F", options: a4fOptions });
-      }
-
-      if (props.openaiToken || useConfigStore.getState().tokens.openai?.length > 0) {
-        const openaiOptions = baseList
-          .filter((m) => m.provider === "openai")
-          .map((m) => ({ value: m.value, label: props.openaiConfig.modelId ? toPascalCaseWithSpace(props.openaiConfig.modelId) : cleanLabel(m.label) }));
-        if (openaiOptions.length > 0)
-          groups.push({ label: "OpenAI", options: openaiOptions });
-      }
-
-      if (props.googleToken || useConfigStore.getState().tokens.google?.length > 0) {
-        const googleOptions = baseList
-          .filter((m) => m.provider === "google")
-          .map((m) => ({ value: m.value, label: props.googleConfig.modelId ? toPascalCaseWithSpace(props.googleConfig.modelId) : cleanLabel(m.label) }));
-        if (googleOptions.length > 0)
-          groups.push({ label: "Google", options: googleOptions });
-      }
-    }
-
-    if (isServer || isHydration) {
-      props.customProviders.forEach((cp) => {
-        const models = cp.models[type];
-        if (models && models.length > 0) {
-          groups.push({
-            label: cp.name,
-            options: models.map((m) => ({
-              label: m.name,
-              value: `${cp.id}:${m.id}`,
-            })),
-          });
-        }
-      });
-    }
+    });
 
     return groups;
   };
@@ -132,7 +50,7 @@ export const ModelsTab: React.FC<ModelsTabProps> = (props) => {
         label={t.model_edit}
         value={props.editModelValue}
         onChange={props.setEditModelValue}
-        options={getAvailableModelGroups(EDIT_MODELS, "edit")}
+        options={getAvailableModelGroups("edit")}
         icon={<Layers className="w-4 h-4" />}
         dense
       />
@@ -140,7 +58,7 @@ export const ModelsTab: React.FC<ModelsTabProps> = (props) => {
         label={t.model_live}
         value={props.liveModelValue}
         onChange={props.setLiveModelValue}
-        options={getAvailableModelGroups(LIVE_MODELS, "video")}
+        options={getAvailableModelGroups("video")}
         icon={<Film className="w-4 h-4" />}
         dense
       />
@@ -148,7 +66,7 @@ export const ModelsTab: React.FC<ModelsTabProps> = (props) => {
         label={t.upscale}
         value={props.upscalerModelValue}
         onChange={props.setUpscalerModelValue}
-        options={getAvailableModelGroups(UPSCALER_MODELS, "upscaler")}
+        options={getAvailableModelGroups("upscaler")}
         icon={<Plus className="w-4 h-4" />}
         dense
       />
@@ -156,7 +74,7 @@ export const ModelsTab: React.FC<ModelsTabProps> = (props) => {
         label={t.model_text}
         value={props.textModelValue}
         onChange={props.setTextModelValue}
-        options={getAvailableModelGroups(TEXT_MODELS, "text")}
+        options={getAvailableModelGroups("text")}
         icon={<Brain className="w-4 h-4" />}
         dense
       />

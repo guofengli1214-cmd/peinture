@@ -4,9 +4,7 @@ import { useConfigStore } from "../store/configStore";
 import {
   CustomProvider,
   RemoteModelList,
-  ServiceMode,
   VideoSettings,
-  UnifiedModelOption,
 } from "../types";
 import {
   getSystemPromptContent,
@@ -28,19 +26,8 @@ import {
   addCustomProvider,
   removeCustomProvider,
   generateUUID,
-  getServiceMode,
 } from "../services/utils";
 import { transformModelList } from "../services/customService";
-import {
-  HF_MODEL_OPTIONS,
-  GITEE_MODEL_OPTIONS,
-  MS_MODEL_OPTIONS,
-  A4F_MODEL_OPTIONS,
-  EDIT_MODELS,
-  LIVE_MODELS,
-  TEXT_MODELS,
-  UPSCALER_MODELS,
-} from "../constants";
 import { useTokensForm } from "./useTokensForm";
 import { useStorageForm } from "./useStorageForm";
 
@@ -59,7 +46,6 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
   const [activeTab, setActiveTab] = useState<
     "general" | "provider" | "models" | "prompt" | "live" | "s3" | "webdav"
   >("general");
-  const [serviceMode, setServiceMode] = useState<ServiceMode>("local");
 
   const [openaiConfigState, setOpenAIConfigState] =
     useState(initialOpenaiConfig);
@@ -143,8 +129,6 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
   // object references on every render, which would cause an infinite loop.
   useEffect(() => {
     if (isOpen) {
-      setServiceMode(getServiceMode());
-
       // Pull latest config from store
       setOpenAIConfigState(useConfigStore.getState().openaiConfig);
       setGoogleConfigState(useConfigStore.getState().googleConfig);
@@ -200,91 +184,23 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
   }, [isOpen, provider, model]);
 
   // -- Validation Effect --
+  // serviceMode is permanently "server": valid models come only from the
+  // (admin-assigned) custom providers, keyed by capability.
   useEffect(() => {
     const getValidValues = (
       type: "generate" | "edit" | "video" | "text" | "upscaler",
-      baseList: UnifiedModelOption[],
     ) => {
       const valid = new Set<string>();
-      const isLocal = serviceMode === "local" || serviceMode === "hydration";
-      const isServer = serviceMode === "server" || serviceMode === "hydration";
-
-      if (isLocal) {
-        baseList
-          .filter((m) => m.provider === "huggingface")
-          .forEach((m) => valid.add(m.value));
-        if (
-          tokensForm.giteeToken ||
-          useConfigStore.getState().tokens.gitee?.length > 0
-        )
-          baseList
-            .filter((m) => m.provider === "gitee")
-            .forEach((m) => valid.add(m.value));
-        if (
-          tokensForm.msToken ||
-          useConfigStore.getState().tokens.modelscope?.length > 0
-        )
-          baseList
-            .filter((m) => m.provider === "modelscope")
-            .forEach((m) => valid.add(m.value));
-        if (
-          tokensForm.a4fToken ||
-          useConfigStore.getState().tokens.a4f?.length > 0
-        )
-          baseList
-            .filter((m) => m.provider === "a4f")
-            .forEach((m) => valid.add(m.value));
-        if (
-          tokensForm.openaiToken ||
-          useConfigStore.getState().tokens.openai?.length > 0
-        )
-          baseList
-            .filter((m) => m.provider === "openai")
-            .forEach((m) => valid.add(m.value));
-        if (
-          tokensForm.googleToken ||
-          useConfigStore.getState().tokens.google?.length > 0
-        )
-          baseList
-            .filter((m) => m.provider === "google")
-            .forEach((m) => valid.add(m.value));
-      }
-
-      if (isServer) {
-        customProviders.forEach((cp) => {
-          const models = cp.models[type];
-          if (models) {
-            models.forEach((m) => valid.add(`${cp.id}:${m.id}`));
-          }
-        });
-      }
+      customProviders.forEach((cp) => {
+        const models = cp.models[type];
+        if (models) {
+          models.forEach((m) => valid.add(`${cp.id}:${m.id}`));
+        }
+      });
       return Array.from(valid);
     };
 
-    const baseCreationList: UnifiedModelOption[] = [
-      ...HF_MODEL_OPTIONS.map((m) => ({
-        label: m.label,
-        value: `huggingface:${m.value}`,
-        provider: "huggingface" as any,
-      })),
-      ...GITEE_MODEL_OPTIONS.map((m) => ({
-        label: m.label,
-        value: `gitee:${m.value}`,
-        provider: "gitee" as any,
-      })),
-      ...MS_MODEL_OPTIONS.map((m) => ({
-        label: m.label,
-        value: `modelscope:${m.value}`,
-        provider: "modelscope" as any,
-      })),
-      ...A4F_MODEL_OPTIONS.map((m) => ({
-        label: m.label,
-        value: `a4f:${m.value}`,
-        provider: "a4f" as any,
-      })),
-    ];
-
-    const validCreation = getValidValues("generate", baseCreationList);
+    const validCreation = getValidValues("generate");
     if (
       validCreation.length > 0 &&
       (!creationModelValue || !validCreation.includes(creationModelValue))
@@ -292,7 +208,7 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
       setCreationModelValue(validCreation[0]);
     }
 
-    const validEdit = getValidValues("edit", EDIT_MODELS);
+    const validEdit = getValidValues("edit");
     if (
       validEdit.length > 0 &&
       (!editModelValue || !validEdit.includes(editModelValue))
@@ -300,7 +216,7 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
       setEditModelValue(validEdit[0]);
     }
 
-    const validLive = getValidValues("video", LIVE_MODELS);
+    const validLive = getValidValues("video");
     if (
       validLive.length > 0 &&
       (!liveModelValue || !validLive.includes(liveModelValue))
@@ -308,7 +224,7 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
       setLiveModelValue(validLive[0]);
     }
 
-    const validText = getValidValues("text", TEXT_MODELS);
+    const validText = getValidValues("text");
     if (
       validText.length > 0 &&
       (!textModelValue || !validText.includes(textModelValue))
@@ -316,7 +232,7 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
       setTextModelValue(validText[0]);
     }
 
-    const validUpscaler = getValidValues("upscaler", UPSCALER_MODELS);
+    const validUpscaler = getValidValues("upscaler");
     if (
       validUpscaler.length > 0 &&
       (!upscalerModelValue || !validUpscaler.includes(upscalerModelValue))
@@ -328,32 +244,11 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
     customProviders,
     editModelValue,
     liveModelValue,
-    serviceMode,
     textModelValue,
-    tokensForm.a4fToken,
-    tokensForm.giteeToken,
-    tokensForm.googleToken,
-    tokensForm.msToken,
-    tokensForm.openaiToken,
     upscalerModelValue,
   ]);
 
   // -- Handlers --
-
-  const handleServiceModeChange = (newMode: ServiceMode) => {
-    setServiceMode(newMode);
-    if (newMode === "local") {
-      const customList = getCustomProviders();
-      const currentProviderIsCustom = customList.some(
-        (cp) => cp.id === provider,
-      );
-      if (currentProviderIsCustom) {
-        setProvider("huggingface");
-        setModel(HF_MODEL_OPTIONS[0].value as any);
-        setCreationModelValue(`huggingface:${HF_MODEL_OPTIONS[0].value}`);
-      }
-    }
-  };
 
   const handleFetchCustomModels = async () => {
     if (!newProviderUrl) return;
@@ -458,8 +353,6 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
   return {
     activeTab,
     setActiveTab,
-    serviceMode,
-    handleServiceModeChange,
 
     // Tokens (from composed hook)
     ...tokensForm,

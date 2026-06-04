@@ -127,14 +127,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   {tab.id === "models" && (
                     <ModelsTab
-                      serviceMode={form.serviceMode}
-                      giteeToken={form.giteeToken}
-                      msToken={form.msToken}
-                      a4fToken={form.a4fToken}
-                      openaiToken={form.openaiToken}
-                      googleToken={form.googleToken}
-                      openaiConfig={form.openaiConfig}
-                      googleConfig={form.googleConfig}
                       customProviders={form.customProviders}
                       editModelValue={form.editModelValue}
                       setEditModelValue={form.setEditModelValue}

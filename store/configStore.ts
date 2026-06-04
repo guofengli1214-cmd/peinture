@@ -66,7 +66,6 @@ export interface ConfigState {
    */
   hasTokens: Record<ProviderId, boolean>;
 
-  setServiceMode: (mode: ServiceMode) => void;
   setStorageType: (type: StorageType) => void;
   setS3Config: (config: S3Config) => void;
   setWebDAVConfig: (config: WebDAVConfig) => void;
@@ -97,8 +96,9 @@ export interface ConfigState {
 // No persistence: secrets must never live in the browser, and the server is the
 // single source of truth. State is hydrated from GET /api/config after login.
 export const useConfigStore = create<ConfigState>()((set) => ({
-      serviceMode:
-        (import.meta.env.VITE_SERVICE_MODE as ServiceMode) || "server",
+      // serviceMode is permanently "server"; the browser always goes through
+      // the unified server engine (/api/v1/*). Local/hydration modes are gone.
+      serviceMode: "server",
       storageType: "opfs",
       s3Config: DEFAULT_S3_CONFIG,
       webdavConfig: DEFAULT_WEBDAV_CONFIG,
@@ -153,7 +153,6 @@ export const useConfigStore = create<ConfigState>()((set) => ({
         google: false,
       },
 
-      setServiceMode: (serviceMode) => set({ serviceMode }),
       setStorageType: (storageType) => set({ storageType }),
       setS3Config: (s3Config) => set({ s3Config }),
       setWebDAVConfig: (webdavConfig) => set({ webdavConfig }),

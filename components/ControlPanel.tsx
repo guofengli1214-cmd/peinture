@@ -12,16 +12,11 @@ import {
 } from "lucide-react";
 import { ModelOption, ProviderOption, AspectRatioOption } from "../types";
 import {
-  HF_MODEL_OPTIONS,
-  GITEE_MODEL_OPTIONS,
-  MS_MODEL_OPTIONS,
-  A4F_MODEL_OPTIONS,
   getModelConfig,
   getGuidanceScaleConfig,
 } from "../constants";
-import { getCustomProviders, getServiceMode } from "../services/utils";
+import { getCustomProviders } from "../services/utils";
 import { useSettingsStore } from "../store/settingsStore";
-import { useConfigStore } from "../store/configStore";
 import { translations } from "../translations";
 
 export const ControlPanel: React.FC = () => {
@@ -42,15 +37,6 @@ export const ControlPanel: React.FC = () => {
     enableHD,
     setEnableHD,
   } = useSettingsStore();
-  const { tokens, openaiConfig, googleConfig } = useConfigStore();
-
-  const toPascalCaseWithSpace = (str: string) => {
-    if (!str) return "";
-    return str
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
 
   const t = translations[language];
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
@@ -70,112 +56,35 @@ export const ControlPanel: React.FC = () => {
     [t],
   );
 
-  // Build grouped model options dynamically
+  // Build grouped model options dynamically.
+  // serviceMode is permanently "server": creation models come only from the
+  // (admin-assigned) custom providers.
   useEffect(() => {
     const updateModelOptions = () => {
-      const serviceMode = getServiceMode();
       const groups: OptionGroup[] = [];
 
-      const showBase = serviceMode === "local" || serviceMode === "hydration";
-      const showCustom =
-        serviceMode === "server" || serviceMode === "hydration";
-
-      // 1. Default Providers
-      if (showBase) {
-        // Hugging Face (Always visible)
-        groups.push({
-          label: t.provider_huggingface,
-          options: HF_MODEL_OPTIONS.map((m) => ({
-            label: m.label,
-            value: `huggingface:${m.value}`,
-          })),
-        });
-
-        // Gitee (Only if token exists)
-        if (tokens.gitee && tokens.gitee.length > 0) {
+      const customProviders = getCustomProviders();
+      customProviders.forEach((cp) => {
+        const models = cp.models.generate;
+        if (models && models.length > 0) {
           groups.push({
-            label: t.provider_gitee,
-            options: GITEE_MODEL_OPTIONS.map((m) => ({
-              label: m.label,
-              value: `gitee:${m.value}`,
+            label: cp.name,
+            options: models.map((m) => ({
+              label: m.name,
+              value: `${cp.id}:${m.id}`,
             })),
           });
         }
-
-        // Model Scope (Only if token exists)
-        if (tokens.modelscope && tokens.modelscope.length > 0) {
-          groups.push({
-            label: t.provider_modelscope,
-            options: MS_MODEL_OPTIONS.map((m) => ({
-              label: m.label,
-              value: `modelscope:${m.value}`,
-            })),
-          });
-        }
-
-        // A4F (Only if token exists)
-        if (tokens.a4f && tokens.a4f.length > 0) {
-          groups.push({
-            label: t.provider_a4f,
-            options: A4F_MODEL_OPTIONS.map((m) => ({
-              label: m.label,
-              value: `a4f:${m.value}`,
-            })),
-          });
-        }
-
-        // OpenAI (Only if token exists)
-        if (tokens.openai && tokens.openai.length > 0 && openaiConfig.modelId) {
-          groups.push({
-            label: "OpenAI",
-            options: [
-              {
-                label: toPascalCaseWithSpace(openaiConfig.modelId),
-                value: `openai:${openaiConfig.modelId}`,
-              },
-            ],
-          });
-        }
-
-        // Google (Only if token exists)
-        if (tokens.google && tokens.google.length > 0 && googleConfig.modelId) {
-          groups.push({
-            label: "Google",
-            options: [
-              {
-                label: toPascalCaseWithSpace(googleConfig.modelId),
-                value: `google:${googleConfig.modelId}`,
-              },
-            ],
-          });
-        }
-      }
-
-      // 2. Custom Providers
-      if (showCustom) {
-        const customProviders = getCustomProviders();
-        customProviders.forEach((cp) => {
-          const models = cp.models.generate;
-          if (models && models.length > 0) {
-            groups.push({
-              label: cp.name,
-              options: models.map((m) => ({
-                label: m.name,
-                value: `${cp.id}:${m.id}`,
-              })),
-            });
-          }
-        });
-      }
+      });
 
       setModelOptions(groups);
     };
 
     updateModelOptions();
-    // Listen for storage changes to update list dynamically (e.g. after adding token in settings)
+    // Listen for storage changes to update list dynamically (e.g. after provider sync)
     window.addEventListener("storage", updateModelOptions);
     return () => window.removeEventListener("storage", updateModelOptions);
-  }, [t, tokens, openaiConfig, googleConfig]);
+  }, [t]);
 
   // Determine current model configuration (Standard or Custom)
   const activeConfig = useMemo(() => {
