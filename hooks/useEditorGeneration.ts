@@ -11,15 +11,10 @@ import {
   getCustomProviders,
 } from "../services/utils";
 import { translations } from "../translations";
-import { editImageQwen } from "../services/hfService";
-import { editImageGitee, optimizePromptGitee } from "../services/giteeService";
-import { editImageMS, optimizePromptMS } from "../services/msService";
 import {
   editImageCustom,
   optimizePromptCustom,
 } from "../services/customService";
-import { generateOpenAIImage } from "../services/openaiService";
-import { generateGoogleImage } from "../services/googleService";
 import { optimizeEditPrompt } from "../services/utils";
 import { saveTempFileToOPFS } from "../services/storageService";
 
@@ -70,28 +65,6 @@ export const useEditorGeneration = (
     });
   };
 
-  const scaleToConstraints = (w: number, h: number, maxVal: number = 2048) => {
-    let width = w;
-    let height = h;
-    const MAX = maxVal;
-    const MIN = 256;
-    if (width > MAX || height > MAX) {
-      const ratio = Math.min(MAX / width, MAX / height);
-      width = Math.floor(width * ratio);
-      height = Math.floor(height * ratio);
-    }
-    if (width < MIN || height < MIN) {
-      const ratio = Math.max(MIN / width, MIN / height);
-      width = Math.ceil(width * ratio);
-      height = Math.ceil(height * ratio);
-    }
-    const normalize = (v: number) => Math.floor(v / 8) * 8;
-    return {
-      width: normalize(width),
-      height: normalize(height),
-    };
-  };
-
   const handleOptimize = async () => {
     if (!image || !prompt.trim()) return;
     setIsOptimizing(true);
@@ -119,30 +92,18 @@ export const useEditorGeneration = (
       const textConfig = getTextModelConfig();
       let optimized = "";
 
-      if (textConfig.provider === "huggingface") {
-        optimized = await optimizeEditPrompt(base64, prompt, textConfig.model);
-      } else if (textConfig.provider === "gitee") {
-        optimized = await optimizePromptGitee(prompt, textConfig.model);
-      } else if (textConfig.provider === "modelscope") {
-        optimized = await optimizePromptMS(prompt, textConfig.model);
-      } else {
-        const customProviders = getCustomProviders();
-        const activeCustom = customProviders.find(
-          (p) => p.id === textConfig.provider,
+      const customProviders = getCustomProviders();
+      const activeCustom = customProviders.find(
+        (p) => p.id === textConfig.provider,
+      );
+      if (activeCustom) {
+        optimized = await optimizePromptCustom(
+          activeCustom,
+          textConfig.model,
+          prompt,
         );
-        if (activeCustom) {
-          optimized = await optimizePromptCustom(
-            activeCustom,
-            textConfig.model,
-            prompt,
-          );
-        } else {
-          optimized = await optimizeEditPrompt(
-            base64,
-            prompt,
-            textConfig.model,
-          );
-        }
+      } else {
+        optimized = await optimizeEditPrompt(base64, prompt, textConfig.model);
       }
 
       if (optimized) setPrompt(optimized);
@@ -164,12 +125,6 @@ export const useEditorGeneration = (
     const controller = new AbortController();
     abortControllerRef.current = controller;
     try {
-      const maxDimension = 2048;
-      const { width, height } = scaleToConstraints(
-        image.naturalWidth,
-        image.naturalHeight,
-        maxDimension,
-      );
       const hasDrawings = historyIndex > 0;
       const imageBlobs: Blob[] = [];
       let promptSuffix = `\n${t.prompt_original_image}`;
@@ -209,108 +164,22 @@ export const useEditorGeneration = (
       const config = getEditModelConfig();
       const activeProvider = config.provider;
 
-      if (activeProvider === "gitee") {
-        result = await editImageGitee(
+      const customProviders = getCustomProviders();
+      const activeCustom = customProviders.find(
+        (p) => p.id === activeProvider,
+      );
+      if (activeCustom) {
+        result = await editImageCustom(
+          activeCustom,
+          config.model,
           imageBlobs,
           finalPrompt,
-          width,
-          height,
-          16,
-          4,
-          controller.signal,
-        );
-      } else if (activeProvider === "modelscope") {
-        result = await editImageMS(
-          imageBlobs,
-          finalPrompt,
-          width,
-          height,
-          16,
-          4,
-          controller.signal,
-        );
-      } else if (activeProvider === "huggingface") {
-        result = await editImageQwen(
-          imageBlobs,
-          finalPrompt,
-          width,
-          height,
-          4,
-          1,
-          controller.signal,
-        );
-      } else if (activeProvider === "openai") {
-        // Convert all blobs to base64
-        const base64Images = await Promise.all(
-          imageBlobs.map(
-            (blob) =>
-              new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(blob);
-              })
-          )
-        );
-        const genResult = await generateOpenAIImage(
-          config.model as any,
-          finalPrompt,
-          "1:1",
           undefined,
           undefined,
-          false,
           undefined,
-          base64Images
         );
-        result = { url: genResult.url };
-      } else if (activeProvider === "google") {
-        // Convert all blobs to base64
-        const base64Images = await Promise.all(
-          imageBlobs.map(
-            (blob) =>
-              new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(blob);
-              })
-          )
-        );
-        const genResult = await generateGoogleImage(
-          config.model as any,
-          finalPrompt,
-          "1:1",
-          undefined,
-          undefined,
-          false,
-          undefined,
-          base64Images
-        );
-        result = { url: genResult.url };
       } else {
-        const customProviders = getCustomProviders();
-        const activeCustom = customProviders.find(
-          (p) => p.id === activeProvider,
-        );
-        if (activeCustom) {
-          result = await editImageCustom(
-            activeCustom,
-            config.model,
-            imageBlobs,
-            finalPrompt,
-            undefined,
-            undefined,
-            undefined,
-          );
-        } else {
-          result = await editImageQwen(
-            imageBlobs,
-            finalPrompt,
-            width,
-            height,
-            4,
-            1,
-            controller.signal,
-          );
-        }
+        throw new Error("Invalid provider");
       }
 
       // Cache result to OPFS and use local Object URL

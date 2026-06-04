@@ -9,20 +9,6 @@ import { useDataStore } from "../store/dataStore";
 import { translations } from "../translations";
 import { GeneratedImage, ModelOption, ProviderOption } from "../types";
 import {
-  generateGiteeImage,
-  optimizePromptGitee,
-  createVideoTask,
-} from "../services/giteeService";
-import { generateMSImage, optimizePromptMS } from "../services/msService";
-import {
-  generateImage,
-  createVideoTaskHF,
-  optimizePrompt as optimizePromptHF,
-} from "../services/hfService";
-import { generateA4FImage, optimizePromptA4F } from "../services/a4fService";
-import { generateOpenAIImage } from "../services/openaiService";
-import { generateGoogleImage } from "../services/googleService";
-import {
   generateCustomImage,
   generateCustomVideo,
   optimizePromptCustom,
@@ -33,7 +19,6 @@ import {
   getTextModelConfig,
   getCustomProviders,
   getVideoSettings,
-  getServiceMode,
   fetchBlob,
   getExtensionFromUrl,
   convertBlobToPng,
@@ -42,14 +27,7 @@ import {
 import { getDefaultModelParams } from "../services/modelUtils";
 import { saveTempFileToOPFS, fetchCloudBlob } from "../services/storageService";
 import { resolveErrorMessage } from "../services/errorUtils";
-import {
-  HF_MODEL_OPTIONS,
-  GITEE_MODEL_OPTIONS,
-  MS_MODEL_OPTIONS,
-  A4F_MODEL_OPTIONS,
-  getGuidanceScaleConfig,
-  LIVE_MODELS,
-} from "../constants";
+import { getGuidanceScaleConfig } from "../constants";
 
 /**
  * Hook that encapsulates all image/video generation logic for CreationView.
@@ -78,7 +56,6 @@ export const useCreationGeneration = () => {
     setIsTranslating,
     setIsOptimizing,
     setIsLiveMode,
-    imageDimensions,
     setImageDimensions,
   } = useUIStore();
 
@@ -119,83 +96,21 @@ export const useCreationGeneration = () => {
       const requestHD = useSettingsStore.getState().enableHD;
 
       let result;
-      if (provider === "gitee") {
-        result = await generateGiteeImage(
+      const customProviders = getCustomProviders();
+      const activeProvider = customProviders.find((p) => p.id === provider);
+      if (activeProvider) {
+        result = await generateCustomImage(
+          activeProvider,
           model,
           finalPrompt,
           aspectRatio,
           seedNumber,
           steps,
-          requestHD,
           currentGuidanceScale,
-        );
-      } else if (provider === "modelscope") {
-        result = await generateMSImage(
-          model,
-          finalPrompt,
-          aspectRatio,
-          seedNumber,
-          steps,
           requestHD,
-          currentGuidanceScale,
-        );
-      } else if (provider === "huggingface") {
-        result = await generateImage(
-          model,
-          finalPrompt,
-          aspectRatio,
-          seedNumber,
-          requestHD,
-          steps,
-          currentGuidanceScale,
-        );
-      } else if (provider === "a4f") {
-        result = await generateA4FImage(
-          model,
-          finalPrompt,
-          aspectRatio,
-          seedNumber,
-          steps,
-          requestHD,
-          currentGuidanceScale,
-        );
-      } else if (provider === "openai") {
-        result = await generateOpenAIImage(
-          model,
-          finalPrompt,
-          aspectRatio,
-          seedNumber,
-          steps,
-          requestHD,
-          currentGuidanceScale,
-        );
-      } else if (provider === "google") {
-        result = await generateGoogleImage(
-          model,
-          finalPrompt,
-          aspectRatio,
-          seedNumber,
-          steps,
-          requestHD,
-          currentGuidanceScale,
         );
       } else {
-        const customProviders = getCustomProviders();
-        const activeProvider = customProviders.find((p) => p.id === provider);
-        if (activeProvider) {
-          result = await generateCustomImage(
-            activeProvider,
-            model,
-            finalPrompt,
-            aspectRatio,
-            seedNumber,
-            steps,
-            currentGuidanceScale,
-            requestHD,
-          );
-        } else {
-          throw new Error("Invalid provider");
-        }
+        throw new Error("Invalid provider");
       }
 
       const endTime = Date.now();
@@ -262,26 +177,18 @@ export const useCreationGeneration = () => {
     try {
       const config = getTextModelConfig();
       let optimized = "";
-      if (config.provider === "gitee")
-        optimized = await optimizePromptGitee(prompt, config.model);
-      else if (config.provider === "modelscope")
-        optimized = await optimizePromptMS(prompt, config.model);
-      else if (config.provider === "a4f")
-        optimized = await optimizePromptA4F(prompt, config.model);
-      else if (config.provider === "huggingface")
-        optimized = await optimizePromptHF(prompt, config.model);
-      else {
-        const customProviders = getCustomProviders();
-        const activeProvider = customProviders.find(
-          (p) => p.id === config.provider,
+      const customProviders = getCustomProviders();
+      const activeProvider = customProviders.find(
+        (p) => p.id === config.provider,
+      );
+      if (activeProvider) {
+        optimized = await optimizePromptCustom(
+          activeProvider,
+          config.model,
+          prompt,
         );
-        if (activeProvider)
-          optimized = await optimizePromptCustom(
-            activeProvider,
-            config.model,
-            prompt,
-          );
-        else optimized = await optimizePromptHF(prompt, config.model);
+      } else {
+        throw new Error("Invalid provider");
       }
       setPrompt(optimized);
     } catch (err: any) {
@@ -300,29 +207,16 @@ export const useCreationGeneration = () => {
     if (currentImage.videoStatus === "generating") return;
 
     let liveConfig = getLiveModelConfig();
-    const serviceMode = getServiceMode();
     const customProviders = getCustomProviders();
     const availableLiveModels: { provider: string; model: string }[] = [];
 
-    if (serviceMode === "local" || serviceMode === "hydration") {
-      LIVE_MODELS.forEach((m) => {
-        const parts = m.value.split(":");
-        if (parts.length >= 2)
-          availableLiveModels.push({
-            provider: parts[0],
-            model: parts.slice(1).join(":"),
-          });
-      });
-    }
-    if (serviceMode === "server" || serviceMode === "hydration") {
-      customProviders.forEach((cp) => {
-        if (cp.models.video) {
-          cp.models.video.forEach((m) =>
-            availableLiveModels.push({ provider: cp.id, model: m.id }),
-          );
-        }
-      });
-    }
+    customProviders.forEach((cp) => {
+      if (cp.models.video) {
+        cp.models.video.forEach((m) =>
+          availableLiveModels.push({ provider: cp.id, model: m.id }),
+        );
+      }
+    });
 
     const isConfigValid = availableLiveModels.some(
       (m) => m.provider === liveConfig.provider && m.model === liveConfig.model,
@@ -334,8 +228,6 @@ export const useCreationGeneration = () => {
       return;
     }
 
-    let width = imageDimensions?.width || 1024;
-    let height = imageDimensions?.height || 1024;
     const currentVideoProvider = liveConfig.provider as ProviderOption;
     let imageInput: string | Blob = currentImage.url;
     try {
@@ -351,29 +243,6 @@ export const useCreationGeneration = () => {
       );
     }
 
-    if (currentVideoProvider === "gitee") {
-      if (typeof imageInput === "string" && imageInput.startsWith("opfs://")) {
-        try {
-          imageInput = await fetchBlob(imageInput);
-        } catch (e) {
-          console.error("Failed to fetch OPFS blob for Gitee", e);
-          toast.error("Failed to prepare image");
-          return;
-        }
-      }
-
-      const imgAspectRatio = width / height;
-      if (width >= height) {
-        height = 720;
-        width = Math.round(height * imgAspectRatio);
-      } else {
-        width = 720;
-        height = Math.round(width / imgAspectRatio);
-      }
-      if (width % 2 !== 0) width -= 1;
-      if (height % 2 !== 0) height -= 1;
-    }
-
     try {
       const loadingImage = {
         ...currentImage,
@@ -386,108 +255,67 @@ export const useCreationGeneration = () => {
         prev.map((img) => (img.id === loadingImage.id ? loadingImage : img)),
       );
 
-      if (currentVideoProvider === "gitee") {
-        const taskId = await createVideoTask(imageInput, width, height);
-        const nextPollTime = Date.now() + 400 * 1000;
-        const taskedImage = {
-          ...loadingImage,
-          videoTaskId: taskId,
-          videoNextPollTime: nextPollTime,
-        } as GeneratedImage;
-        setCurrentImage(taskedImage);
-        setHistory((prev) =>
-          prev.map((img) => (img.id === taskedImage.id ? taskedImage : img)),
+      const activeProvider = customProviders.find(
+        (p) => p.id === currentVideoProvider,
+      );
+      if (activeProvider) {
+        const settings = getVideoSettings(currentVideoProvider);
+        // Upload the image bytes — the server can't fetch a blob:/opfs: URL.
+        const imageBlob =
+          imageInput instanceof Blob
+            ? imageInput
+            : currentImage.url.startsWith("opfs://")
+              ? await fetchCloudBlob(currentImage.url)
+              : await fetchBlob(currentImage.url);
+        const result = await generateCustomVideo(
+          activeProvider,
+          liveConfig.model,
+          imageBlob,
+          settings.prompt,
+          settings.duration,
+          currentImage.seed ?? 42,
+          settings.steps,
+          settings.guidance,
         );
-      } else if (currentVideoProvider === "huggingface") {
-        const videoUrl = await createVideoTaskHF(imageInput, currentImage.seed);
-
-        const videoBlob = await fetchBlob(videoUrl);
-        const videoFileName = `live-${currentImage.id}.mp4`;
-        await saveTempFileToOPFS(videoBlob, videoFileName);
-        const objectUrl = URL.createObjectURL(videoBlob);
-
-        const successImage = {
-          ...loadingImage,
-          videoStatus: "success",
-          videoUrl: objectUrl,
-          videoFileName: videoFileName,
-        } as GeneratedImage;
-
-        setHistory((prev) =>
-          prev.map((img) => (img.id === successImage.id ? successImage : img)),
-        );
-        setCurrentImage((prev) =>
-          prev && prev.id === successImage.id ? successImage : prev,
-        );
-        if (useUIStore.getState().currentImageId === successImage.id)
-          setIsLiveMode(true);
-      } else {
-        const activeProvider = customProviders.find(
-          (p) => p.id === currentVideoProvider,
-        );
-        if (activeProvider) {
-          const settings = getVideoSettings(currentVideoProvider);
-          // Upload the image bytes — the server can't fetch a blob:/opfs: URL.
-          const imageBlob =
-            imageInput instanceof Blob
-              ? imageInput
-              : currentImage.url.startsWith("opfs://")
-                ? await fetchCloudBlob(currentImage.url)
-                : await fetchBlob(currentImage.url);
-          const result = await generateCustomVideo(
-            activeProvider,
-            liveConfig.model,
-            imageBlob,
-            settings.prompt,
-            settings.duration,
-            currentImage.seed ?? 42,
-            settings.steps,
-            settings.guidance,
+        if (result.taskId) {
+          const nextPollTime = result.predict
+            ? Date.now() + result.predict * 1000
+            : undefined;
+          const taskedImage = {
+            ...loadingImage,
+            videoTaskId: result.taskId,
+            videoNextPollTime: nextPollTime,
+          } as GeneratedImage;
+          setCurrentImage(taskedImage);
+          setHistory((prev) =>
+            prev.map((img) => (img.id === taskedImage.id ? taskedImage : img)),
           );
-          if (result.taskId) {
-            const nextPollTime = result.predict
-              ? Date.now() + result.predict * 1000
-              : undefined;
-            const taskedImage = {
-              ...loadingImage,
-              videoTaskId: result.taskId,
-              videoNextPollTime: nextPollTime,
-            } as GeneratedImage;
-            setCurrentImage(taskedImage);
-            setHistory((prev) =>
-              prev.map((img) =>
-                img.id === taskedImage.id ? taskedImage : img,
-              ),
-            );
-          } else if (result.url) {
-            const videoBlob = await fetchBlob(result.url);
-            const videoFileName = `live-${currentImage.id}.mp4`;
-            await saveTempFileToOPFS(videoBlob, videoFileName);
-            const objectUrl = URL.createObjectURL(videoBlob);
+        } else if (result.url) {
+          const videoBlob = await fetchBlob(result.url);
+          const videoFileName = `live-${currentImage.id}.mp4`;
+          await saveTempFileToOPFS(videoBlob, videoFileName);
+          const objectUrl = URL.createObjectURL(videoBlob);
 
-            const successImage = {
-              ...loadingImage,
-              videoStatus: "success",
-              videoUrl: objectUrl,
-              videoFileName: videoFileName,
-            } as GeneratedImage;
+          const successImage = {
+            ...loadingImage,
+            videoStatus: "success",
+            videoUrl: objectUrl,
+            videoFileName: videoFileName,
+          } as GeneratedImage;
 
-            setHistory((prev) =>
-              prev.map((img) =>
-                img.id === successImage.id ? successImage : img,
-              ),
-            );
-            setCurrentImage((prev) =>
-              prev && prev.id === successImage.id ? successImage : prev,
-            );
-            if (useUIStore.getState().currentImageId === successImage.id)
-              setIsLiveMode(true);
-          } else {
-            throw new Error("Invalid response from video provider");
-          }
+          setHistory((prev) =>
+            prev.map((img) => (img.id === successImage.id ? successImage : img)),
+          );
+          setCurrentImage((prev) =>
+            prev && prev.id === successImage.id ? successImage : prev,
+          );
+          if (useUIStore.getState().currentImageId === successImage.id)
+            setIsLiveMode(true);
         } else {
-          throw new Error(t.liveNotSupported || "Live provider not supported");
+          throw new Error("Invalid response from video provider");
         }
+      } else {
+        throw new Error(t.liveNotSupported || "Live provider not supported");
       }
     } catch (e: any) {
       console.error("Video Generation Failed", e);
@@ -511,23 +339,13 @@ export const useCreationGeneration = () => {
     resetImagineParams();
     let newModel = model;
 
-    if (provider === "gitee")
-      newModel = GITEE_MODEL_OPTIONS[0].value as ModelOption;
-    else if (provider === "modelscope")
-      newModel = MS_MODEL_OPTIONS[0].value as ModelOption;
-    else if (provider === "huggingface")
-      newModel = HF_MODEL_OPTIONS[0].value as ModelOption;
-    else if (provider === "a4f")
-      newModel = A4F_MODEL_OPTIONS[0].value as ModelOption;
-    else {
-      const customProviders = getCustomProviders();
-      const activeCustom = customProviders.find((p) => p.id === provider);
-      if (
-        activeCustom?.models?.generate &&
-        activeCustom.models.generate.length > 0
-      ) {
-        newModel = activeCustom.models.generate[0].id as ModelOption;
-      }
+    const customProviders = getCustomProviders();
+    const activeCustom = customProviders.find((p) => p.id === provider);
+    if (
+      activeCustom?.models?.generate &&
+      activeCustom.models.generate.length > 0
+    ) {
+      newModel = activeCustom.models.generate[0].id as ModelOption;
     }
 
     setModel(newModel);
