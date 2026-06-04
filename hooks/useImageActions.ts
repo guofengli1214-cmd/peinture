@@ -6,7 +6,6 @@ import { useDataStore } from "../store/dataStore";
 import { translations } from "../translations";
 import { GeneratedImage } from "../types";
 import { useCloudUpload } from "./useCloudUpload";
-import { upscaler } from "../services/hfService";
 import { upscaleImageCustom } from "../services/customService";
 import {
   getUpscalerModelConfig,
@@ -79,19 +78,14 @@ export const useImageActions = () => {
         const blob = await fetchBlob(currentImage.url);
         const result = await upscaleImageCustom(serverProvider, upModel, blob);
         newUrl = result.url;
-      } else if (config.provider === "huggingface") {
-        const result = await upscaler(currentImage.url);
-        newUrl = result.url;
       } else {
         const activeProvider = customProviders.find((p) => p.id === config.provider);
-        if (activeProvider) {
-          const blob = await fetchBlob(currentImage.url);
-          const result = await upscaleImageCustom(activeProvider, config.model, blob);
-          newUrl = result.url;
-        } else {
-          const result = await upscaler(currentImage.url);
-          newUrl = result.url;
+        if (!activeProvider) {
+          throw new Error("No upscaler provider available");
         }
+        const blob = await fetchBlob(currentImage.url);
+        const result = await upscaleImageCustom(activeProvider, config.model, blob);
+        newUrl = result.url;
       }
       setTempUpscaledImage(newUrl);
       setIsComparing(true);

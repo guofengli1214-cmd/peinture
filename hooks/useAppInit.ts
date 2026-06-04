@@ -23,7 +23,6 @@ import {
   fetchServerModels,
   getCustomTaskStatus,
 } from "../services/customService";
-import { getGiteeTaskStatus } from "../services/giteeService";
 import {
   HF_MODEL_OPTIONS,
   GITEE_MODEL_OPTIONS,
@@ -217,9 +216,7 @@ export const useAppInit = () => {
 
           try {
             let result = null;
-            if (img.videoProvider === "gitee") {
-              result = await getGiteeTaskStatus(img.videoTaskId);
-            } else if (img.videoProvider) {
+            if (img.videoProvider) {
               const customProviders = getCustomProviders();
               const provider = customProviders.find(
                 (p) => p.id === img.videoProvider,
