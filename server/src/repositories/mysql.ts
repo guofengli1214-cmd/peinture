@@ -166,6 +166,14 @@ class MysqlCustomProviderRepository implements CustomProviderRepository {
     return rows[0] ? mapCustomProvider(rows[0]) : null;
   }
 
+  async findGlobalByName(name: string): Promise<CustomProviderRecord | null> {
+    const [rows] = await this.pool.query<RowDataPacket[]>(
+      "SELECT * FROM custom_providers WHERE scope = 'global' AND name = ? LIMIT 1",
+      [name],
+    );
+    return rows[0] ? mapCustomProvider(rows[0]) : null;
+  }
+
   async listGlobal(): Promise<CustomProviderRecord[]> {
     const [rows] = await this.pool.query<RowDataPacket[]>(
       "SELECT * FROM custom_providers WHERE scope = 'global' ORDER BY created_at",

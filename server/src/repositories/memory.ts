@@ -131,6 +131,13 @@ class MemoryCustomProviderRepository implements CustomProviderRepository {
     return this.rows.get(id) ?? null;
   }
 
+  async findGlobalByName(name: string): Promise<CustomProviderRecord | null> {
+    for (const p of this.rows.values()) {
+      if (p.scope === "global" && p.name === name) return p;
+    }
+    return null;
+  }
+
   async listGlobal(): Promise<CustomProviderRecord[]> {
     return [...this.rows.values()].filter((p) => p.scope === "global");
   }

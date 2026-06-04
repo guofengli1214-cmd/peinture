@@ -121,6 +121,7 @@ export interface UpdateCustomProviderInput {
 
 export interface CustomProviderRepository {
   findById(id: string): Promise<CustomProviderRecord | null>;
+  findGlobalByName(name: string): Promise<CustomProviderRecord | null>;
   listGlobal(): Promise<CustomProviderRecord[]>;
   listByOwner(userId: number): Promise<CustomProviderRecord[]>;
   create(input: CreateCustomProviderInput): Promise<CustomProviderRecord>;
