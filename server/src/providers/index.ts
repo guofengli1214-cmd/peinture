@@ -47,6 +47,7 @@ async function resolveCustom(
   const cp = await resolveForUse(ctx, userId, provider);
   const model = cp.models.find((m) => m.modelId === modelId);
   if (!model) throw new Error("MODEL_NOT_FOUND");
+  if (model.enabled === false) throw new Error("MODEL_DISABLED");
   const adapter = ADAPTERS[cp.format];
   if (!adapter[cap]) throw new Error(`capability_not_supported:${String(cap)}`);
   return { c: { apiUrl: cp.apiUrl, secret: cp.secret, model }, adapter };

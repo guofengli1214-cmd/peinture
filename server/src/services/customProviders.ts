@@ -196,7 +196,7 @@ export async function resolveForUse(
   providerId: string,
 ): Promise<ResolvedProvider> {
   const rec = await ctx.repos.customProviders.findById(providerId);
-  const usable = rec && (rec.scope === "global" || rec.ownerUserId === userId);
+  const usable = rec && rec.enabled && (rec.scope === "global" || rec.ownerUserId === userId);
   if (!rec || !usable) throw new Error("PROVIDER_NOT_AVAILABLE");
   return {
     id: rec.id,

@@ -106,9 +106,10 @@ const CAP_TO_TYPE: Record<ModelCapability, ModelType> = {
  */
 export function customModelsToClient(
   providerId: string,
-  models: { modelId: string; name: string; capabilities: ModelCapability[] }[],
+  models: { modelId: string; name: string; capabilities: ModelCapability[]; enabled?: boolean }[],
 ): ClientModel[] {
   return models
+    .filter((m) => m.enabled !== false)
     .map((m) => ({
       id: `${providerId}:${m.modelId}`,
       name: m.name,

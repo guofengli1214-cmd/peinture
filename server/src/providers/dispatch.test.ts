@@ -121,4 +121,29 @@ describe("generation dispatch — custom providers", () => {
       dispatchGenerate(ctx, alice, `${p.id}:nope`, { prompt: "x", aspectRatio: "1:1" }),
     ).rejects.toThrow("MODEL_NOT_FOUND");
   });
+
+  it("rejects a disabled provider even if requested directly", async () => {
+    const ctx = buildTestContext();
+    const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
+    const p = await createGlobalProvider(ctx, {
+      name: "Relay", apiUrl: "https://relay", format: "openai",
+      models: [{ modelId: "img-1", name: "Img", capabilities: ["image"] }], secret: "sk-1",
+      enabled: false,
+    });
+    await expect(
+      dispatchGenerate(ctx, alice, `${p.id}:img-1`, { prompt: "x", aspectRatio: "1:1" }),
+    ).rejects.toThrow("PROVIDER_NOT_AVAILABLE");
+  });
+
+  it("rejects a disabled model even if requested directly", async () => {
+    const ctx = buildTestContext();
+    const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
+    const p = await createGlobalProvider(ctx, {
+      name: "Relay", apiUrl: "https://relay", format: "openai",
+      models: [{ modelId: "img-1", name: "Img", capabilities: ["image"], enabled: false }], secret: "sk-1",
+    });
+    await expect(
+      dispatchGenerate(ctx, alice, `${p.id}:img-1`, { prompt: "x", aspectRatio: "1:1" }),
+    ).rejects.toThrow("MODEL_DISABLED");
+  });
 });

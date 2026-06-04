@@ -5,6 +5,7 @@ import {
   availableModels,
   toClientModels,
   qualifiedId,
+  customModelsToClient,
 } from "./models";
 import { runWithTokenRetry, isQuotaError } from "./tokenRetry";
 
@@ -46,6 +47,17 @@ describe("model registry", () => {
   it("qualifiedId round-trips with parseModelId", () => {
     const m = { provider: "huggingface" as const, modelId: "qwen-image", name: "Q", type: ["text2image" as const] };
     expect(parseModelId(qualifiedId(m))).toEqual({ provider: "huggingface", modelId: "qwen-image" });
+  });
+});
+
+describe("customModelsToClient enabled filtering", () => {
+  it("drops models with enabled === false, keeps undefined/true", () => {
+    const out = customModelsToClient("p1", [
+      { modelId: "a", name: "A", capabilities: ["image"] },
+      { modelId: "b", name: "B", capabilities: ["image"], enabled: true },
+      { modelId: "c", name: "C", capabilities: ["image"], enabled: false },
+    ] as any);
+    expect(out.map((m) => m.id)).toEqual(["p1:a", "p1:b"]);
   });
 });
 

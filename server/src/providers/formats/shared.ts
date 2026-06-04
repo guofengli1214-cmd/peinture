@@ -25,6 +25,8 @@ export interface ModelDef {
   modelId: string;
   name: string;
   capabilities: Capability[];
+  /** Per-model enable switch. Absent/true = enabled; false = hidden from users and refused by dispatch. */
+  enabled?: boolean;
   /** openai-format only: override the endpoint sub-path (relative to apiUrl), e.g. "/openai" for Pollinations. Default uses /v1/chat/completions or /v1/images/generations. */
   endpointPath?: string;
   gradio?: GradioModelConfig;
