@@ -3,6 +3,12 @@ import { buildTestContext, seedUser } from "../testing/helpers";
 import { createForUser, createGlobalProvider } from "../services/customProviders";
 import { dispatchGenerate, dispatchText } from "./index";
 
+vi.mock("./gradio", () => ({
+  runGradioTask: vi.fn().mockResolvedValue({ data: [{ url: "https://hf/g.png" }, 555] }),
+  uploadToGradio: vi.fn().mockResolvedValue("/tmp/x"),
+  makeSessionHash: () => "h",
+}));
+
 const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body, text: async () => "" });
 
 afterEach(() => vi.restoreAllMocks());
@@ -66,5 +72,53 @@ describe("generation dispatch — custom providers", () => {
     await expect(
       dispatchGenerate(ctx, alice, "gitee:z-image-turbo", { prompt: "x", aspectRatio: "1:1" }),
     ).rejects.toThrow("provider_not_supported");
+  });
+
+  it("routes a global gradio provider's model through the gradio adapter", async () => {
+    const ctx = buildTestContext();
+    const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
+    const p = await createGlobalProvider(ctx, {
+      name: "HF",
+      apiUrl: "",
+      format: "gradio",
+      models: [
+        {
+          modelId: "z-image-turbo",
+          name: "Z-Image Turbo",
+          capabilities: ["image"],
+          gradio: {
+            baseUrl: "https://space.hf.space",
+            fnIndex: 2,
+            triggerId: 16,
+            argsTemplate: ["$prompt", "$height", "$width", "$steps", "$seed", false],
+            stepsDefault: 9,
+            outputPath: "data[0]",
+            seedPath: "data[1]",
+          },
+        },
+      ],
+      secret: null,
+    });
+
+    const res = await dispatchGenerate(ctx, alice, `${p.id}:z-image-turbo`, {
+      prompt: "a cat",
+      aspectRatio: "1:1",
+      seed: 42,
+    });
+
+    expect(res.url).toBe("https://hf/g.png");
+    expect(res.seed).toBe(555);
+  });
+
+  it("rejects an unknown model id on a custom provider", async () => {
+    const ctx = buildTestContext();
+    const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
+    const p = await createGlobalProvider(ctx, {
+      name: "Relay", apiUrl: "https://relay", format: "openai",
+      models: [{ modelId: "img-1", name: "Img", capabilities: ["image"] }], secret: "sk-1",
+    });
+    await expect(
+      dispatchGenerate(ctx, alice, `${p.id}:nope`, { prompt: "x", aspectRatio: "1:1" }),
+    ).rejects.toThrow("MODEL_NOT_FOUND");
   });
 });

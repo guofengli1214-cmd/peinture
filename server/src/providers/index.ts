@@ -4,27 +4,24 @@ import { getProviderTokens } from "../services/userConfig";
 import { resolveForUse } from "../services/customProviders";
 import { parseModelId } from "./models";
 import { ADAPTERS } from "./formats/index";
+import type { AdapterContext, EditOpts, FormatAdapter, ImageParams, VideoOpts } from "./formats/shared";
 import {
   generateHF,
   editHF,
   optimizeHF,
   upscaleHF,
   videoHF,
-  type GenerateParams,
   type GenerateResult,
 } from "./huggingface";
 
 /**
  * Provider dispatch for the generation proxy.
  *
- * COMPILE BRIDGE (Task 1): the custom-provider call sites below were minimally
- * rewired to the new AdapterContext signature so the tree compiles after the
- * horizontal FormatAdapter change. The full capability-routing rewrite
- * (resolveCustom, MODEL_NOT_FOUND, gradio/video/upscale dispatch) lands in Task 4.
- *
- *  - "huggingface"          -> the ported HF engine (kept until Phase 5 cleanup)
- *  - other builtin names    -> provider_not_supported
- *  - anything else (a UUID) -> custom/global provider, routed by stored format via ADAPTERS
+ *  - "huggingface"          -> the ported HF engine (kept until phase 5 cleanup)
+ *  - other builtin names    -> not supported (removed once seeded) -> provider_not_supported
+ *  - anything else (a UUID) -> a custom/global provider, routed by its stored
+ *                              format (openai / claude / gemini / gradio) via ADAPTERS,
+ *                              selecting the adapter method by the model's capability.
  */
 
 const BUILTINS: ProviderId[] = ["huggingface", "gitee", "modelscope", "a4f", "openai", "google"];
@@ -39,20 +36,41 @@ async function tokensFor(ctx: AppContext, userId: number, provider: string): Pro
   return getProviderTokens(ctx, userId, provider as ProviderId);
 }
 
+/** Resolve a custom provider + the selected model + verify the capability exists. */
+async function resolveCustom(
+  ctx: AppContext,
+  userId: number,
+  qualifiedModel: string,
+  cap: keyof FormatAdapter,
+): Promise<{ c: AdapterContext; adapter: FormatAdapter }> {
+  const { provider, modelId } = parseModelId(qualifiedModel);
+  const cp = await resolveForUse(ctx, userId, provider);
+  const model = cp.models.find((m) => m.modelId === modelId);
+  if (!model) throw new Error("MODEL_NOT_FOUND");
+  const adapter = ADAPTERS[cp.format];
+  if (!adapter[cap]) throw new Error(`capability_not_supported:${String(cap)}`);
+  return { c: { apiUrl: cp.apiUrl, secret: cp.secret, model }, adapter };
+}
+
 export async function dispatchGenerate(
   ctx: AppContext,
   userId: number,
   qualifiedModel: string,
-  params: GenerateParams,
+  params: ImageParams,
 ): Promise<GenerateResult> {
   const { provider, modelId } = parseModelId(qualifiedModel);
   if (provider === HF) return generateHF(modelId, params, await tokensFor(ctx, userId, provider));
   if (isBuiltin(provider)) throw new Error("provider_not_supported");
 
-  const cp = await resolveForUse(ctx, userId, provider);
-  const model = cp.models.find((m) => m.modelId === modelId) ?? { modelId, name: modelId, capabilities: [] };
-  const { url } = await ADAPTERS[cp.format].generate!({ apiUrl: cp.apiUrl, secret: cp.secret, model }, params);
-  return { id: crypto.randomUUID(), url, seed: params.seed, steps: params.steps, guidance: params.guidance };
+  const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "generate");
+  const r = await adapter.generate!(c, params);
+  return {
+    id: crypto.randomUUID(),
+    url: r.url,
+    seed: r.seed ?? params.seed,
+    steps: r.steps ?? params.steps,
+    guidance: r.guidance ?? params.guidance,
+  };
 }
 
 export async function dispatchEdit(
@@ -61,15 +79,14 @@ export async function dispatchEdit(
   qualifiedModel: string,
   images: Blob[],
   prompt: string,
-  opts: { width?: number; height?: number; steps?: number; guidance?: number },
+  opts: EditOpts,
 ): Promise<{ id: string; url: string; seed?: number }> {
-  const { provider, modelId } = parseModelId(qualifiedModel);
+  const { provider } = parseModelId(qualifiedModel);
   if (provider === HF) return editHF(images, prompt, opts, await tokensFor(ctx, userId, provider));
   if (isBuiltin(provider)) throw new Error("provider_not_supported");
 
-  const cp = await resolveForUse(ctx, userId, provider);
-  const model = cp.models.find((m) => m.modelId === modelId) ?? { modelId, name: modelId, capabilities: [] };
-  const { url } = await ADAPTERS[cp.format].edit!({ apiUrl: cp.apiUrl, secret: cp.secret, model }, images, prompt, opts);
+  const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "edit");
+  const { url } = await adapter.edit!(c, images, prompt, opts);
   return { id: crypto.randomUUID(), url };
 }
 
@@ -84,12 +101,11 @@ export async function dispatchText(
   if (provider === HF) return optimizeHF(prompt, systemPrompt, modelId);
   if (isBuiltin(provider)) throw new Error("provider_not_supported");
 
-  const cp = await resolveForUse(ctx, userId, provider);
-  const model = cp.models.find((m) => m.modelId === modelId) ?? { modelId, name: modelId, capabilities: [] };
-  return ADAPTERS[cp.format].text!({ apiUrl: cp.apiUrl, secret: cp.secret, model }, prompt, systemPrompt);
+  const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "text");
+  return adapter.text!(c, prompt, systemPrompt);
 }
 
-/** HD upscale — HuggingFace only (RealESRGAN). */
+/** HD upscale — HuggingFace (RealESRGAN) or a custom provider whose format supports upscale. */
 export async function dispatchUpscale(
   ctx: AppContext,
   userId: number,
@@ -98,18 +114,24 @@ export async function dispatchUpscale(
 ): Promise<{ url: string }> {
   const { provider } = parseModelId(qualifiedModel);
   if (provider === HF) return upscaleHF(image, await tokensFor(ctx, userId, provider));
-  throw new Error("provider_not_supported");
+  if (isBuiltin(provider)) throw new Error("provider_not_supported");
+
+  const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "upscale");
+  return adapter.upscale!(c, image);
 }
 
-/** Image→video (Live) — HuggingFace only (Wan 2.2), synchronous via Gradio. */
+/** Image→video (Live). HuggingFace (Wan 2.2, sync via Gradio) or a custom provider. */
 export async function dispatchVideo(
   ctx: AppContext,
   userId: number,
   qualifiedModel: string,
   image: Blob,
-  opts: { prompt: string; duration: number; steps: number; guidance: number; seed?: number },
+  opts: VideoOpts,
 ): Promise<{ url: string }> {
   const { provider } = parseModelId(qualifiedModel);
   if (provider === HF) return videoHF(image, opts, await tokensFor(ctx, userId, provider));
-  throw new Error("provider_not_supported");
+  if (isBuiltin(provider)) throw new Error("provider_not_supported");
+
+  const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "video");
+  return adapter.video!(c, image, opts);
 }
