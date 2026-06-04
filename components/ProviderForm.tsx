@@ -31,6 +31,43 @@ const emptyGradio = (): GradioModelConfig => ({
   outputPath: "data[0]",
 });
 
+/**
+ * Build the cleaned model list in a single pass keyed by the ORIGINAL index of
+ * `models`, so the parallel `argsText[]` (which is aligned to `models[]`) always
+ * lines up with the right row. Incomplete rows are skipped. For gradio, the
+ * per-row argsTemplate JSON is parsed; invalid/non-array JSON aborts with an error.
+ */
+export function buildCleanModels(
+  models: ApiProviderModelDef[],
+  argsText: string[],
+  format: ApiProviderFormat,
+): { models: ApiProviderModelDef[] } | { error: "args_invalid" } {
+  const out: ApiProviderModelDef[] = [];
+  for (let i = 0; i < models.length; i++) {
+    const m = models[i];
+    if (!(m.modelId.trim() && m.capabilities.length > 0)) continue; // skip incomplete rows
+    const base: ApiProviderModelDef = {
+      modelId: m.modelId.trim(),
+      name: m.name.trim() || m.modelId.trim(),
+      capabilities: m.capabilities,
+      enabled: m.enabled !== false,
+    };
+    if (format === "openai" && m.endpointPath) base.endpointPath = m.endpointPath;
+    if (format === "gradio") {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(argsText[i] ?? "[]");
+      } catch {
+        return { error: "args_invalid" };
+      }
+      if (!Array.isArray(parsed)) return { error: "args_invalid" };
+      base.gradio = { ...(m.gradio ?? emptyGradio()), argsTemplate: parsed };
+    }
+    out.push(base);
+  }
+  return { models: out };
+}
+
 export const ProviderForm: React.FC<ProviderFormProps> = ({ initial, onSubmit, onCancel }) => {
   const { language } = useSettingsStore();
   const t = translations[language];
@@ -110,43 +147,16 @@ export const ProviderForm: React.FC<ProviderFormProps> = ({ initial, onSubmit, o
     if (!canSubmit || submitting) return;
     setError(null);
 
-    // Parse gradio argsTemplate JSON up-front so we can abort before submitting.
-    const parsedArgs: unknown[][] = [];
-    if (format === "gradio") {
-      for (let i = 0; i < models.length; i++) {
-        const m = models[i];
-        if (!(m.modelId.trim() && m.capabilities.length > 0)) {
-          parsedArgs[i] = [];
-          continue;
-        }
-        try {
-          const parsed = JSON.parse(argsText[i] ?? "[]");
-          if (!Array.isArray(parsed)) throw new Error("not an array");
-          parsedArgs[i] = parsed;
-        } catch {
-          setError(t.prov_gradio_args_invalid);
-          return;
-        }
-      }
+    // Build cleaned models in a single pass keyed by the original index so each
+    // row's gradio argsTemplate (parsed here) lines up with its argsText entry.
+    const result = buildCleanModels(models, argsText, format);
+    if ("error" in result) {
+      setError(t.prov_gradio_args_invalid);
+      return;
     }
+    const cleanModels = result.models;
 
     setSubmitting(true);
-    const cleanModels: ApiProviderModelDef[] = models
-      .filter((m) => m.modelId.trim() && m.capabilities.length > 0)
-      .map((m, i) => {
-        const base: ApiProviderModelDef = {
-          modelId: m.modelId.trim(),
-          name: m.name.trim() || m.modelId.trim(),
-          capabilities: m.capabilities,
-          enabled: m.enabled !== false,
-        };
-        if (format === "openai" && m.endpointPath) base.endpointPath = m.endpointPath;
-        if (format === "gradio") {
-          const g = m.gradio ?? emptyGradio();
-          base.gradio = { ...g, argsTemplate: parsedArgs[i] ?? [] };
-        }
-        return base;
-      });
     const input: CustomApiProviderInput = {
       name: name.trim(),
       apiUrl: apiUrl.trim(),
