@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   listGlobalProviders,
-  createUserProvider,
+  createGlobalProvider,
   adminUpdateProvider,
 } from "../services/providerService";
 
 const prov = {
   id: "cp1",
-  scope: "user",
+  scope: "global",
   managedBy: "admin",
-  ownerUserId: 2,
+  ownerUserId: null,
   name: "Relay",
   apiUrl: "https://relay",
   format: "openai",
@@ -31,8 +31,8 @@ describe("providerService (admin)", () => {
 
     const f2 = vi.fn().mockResolvedValue(ok({ provider: prov }, 201));
     vi.stubGlobal("fetch", f2);
-    await createUserProvider(5, { name: "n", apiUrl: "u", format: "gemini", models: [] });
-    expect(f2.mock.calls[0][0]).toBe("/api/admin/users/5/providers");
+    await createGlobalProvider({ name: "n", apiUrl: "u", format: "gemini", models: [] });
+    expect(f2.mock.calls[0][0]).toBe("/api/admin/providers");
     expect(f2.mock.calls[0][1].method).toBe("POST");
   });
 

@@ -2,8 +2,8 @@ import { CustomApiProvider, CustomApiProviderInput } from "../types";
 
 /**
  * Custom / relay provider API client (OpenAI / Claude / Gemini formats).
- * Admin-only endpoints for global and per-user provider management — regular
- * users cannot self-configure providers. Secrets are never returned (only hasSecret).
+ * Admin-only endpoints for global provider management — regular users cannot
+ * self-configure providers. Secrets are never returned (only hasSecret).
  */
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
@@ -30,14 +30,6 @@ export const listGlobalProviders = (): Promise<CustomApiProvider[]> =>
 
 export const createGlobalProvider = (input: CustomApiProviderInput): Promise<CustomApiProvider> =>
   req("/api/admin/providers", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(input) }, (d) => d.provider);
-
-// --- Admin: per-user ---
-
-export const listUserProviders = (userId: number): Promise<CustomApiProvider[]> =>
-  req(`/api/admin/users/${userId}/providers`, {}, (d) => d.providers as CustomApiProvider[]);
-
-export const createUserProvider = (userId: number, input: CustomApiProviderInput): Promise<CustomApiProvider> =>
-  req(`/api/admin/users/${userId}/providers`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(input) }, (d) => d.provider);
 
 // --- Admin: edit/delete any provider by id ---
 

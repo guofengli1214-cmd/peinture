@@ -15,13 +15,10 @@ import {
 } from "../services/adminService";
 import { CreateUserForm } from "../components/admin/CreateUserForm";
 import { UserAccountActions } from "../components/admin/UserAccountActions";
-import { UserConfigEditor } from "../components/admin/UserConfigEditor";
 import { ProvidersManager } from "../components/ProvidersManager";
 import {
   listGlobalProviders,
   createGlobalProvider,
-  listUserProviders,
-  createUserProvider,
   adminUpdateProvider,
   adminDeleteProvider,
 } from "../services/providerService";
@@ -198,29 +195,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ isOpen, onClose }) => {
                   isSelf={selectedUser.id === currentUserId}
                   onPatch={(patch) => handlePatch(selectedUser.id, patch)}
                   onDelete={() => handleDelete(selectedUser.id)}
-                />
-              </section>
-
-              <section className="pt-4 border-t border-stroke-subtle">
-                <h4 className="text-xs font-bold uppercase tracking-wide text-ink-tertiary mb-3">
-                  {t.admin_config}
-                </h4>
-                <UserConfigEditor
-                  key={selectedUser.id}
-                  userId={selectedUser.id}
-                  onSaved={() => toast.success(t.admin_config_saved)}
-                  onError={() => toast.error(t.admin_action_failed)}
-                />
-              </section>
-
-              <section className="pt-4 border-t border-stroke-subtle">
-                <ProvidersManager
-                  key={`prov-${selectedUser.id}`}
-                  title={t.prov_user}
-                  load={() => listUserProviders(selectedUser.id)}
-                  onCreate={(input) => createUserProvider(selectedUser.id, input)}
-                  onUpdate={adminUpdateProvider}
-                  onDelete={adminDeleteProvider}
                 />
               </section>
             </div>

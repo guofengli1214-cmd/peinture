@@ -130,16 +130,6 @@ export const zh = {
   admin_create: "创建",
   admin_creating: "创建中…",
   admin_account: "账户",
-  admin_config: "配置",
-  admin_tokens: "服务商 Token",
-  admin_token_set: "已配置",
-  admin_token_unset: "未设置",
-  admin_token_placeholder: "输入新的 Token 以替换；用逗号/换行分隔",
-  admin_endpoints: "OpenAI / Google 接口",
-  admin_api_url: "接口地址",
-  admin_model_id: "模型 ID",
-  admin_save_config: "保存配置",
-  admin_saving: "保存中…",
   admin_optional: "可选",
   admin_you: "你",
   admin_user_created: "用户已创建。",
@@ -151,7 +141,7 @@ export const zh = {
 
   // 自定义 / 中转 API 接口
   prov_global: "全局接口",
-  prov_user: "该用户的接口",
+
   prov_add: "添加接口",
   prov_none: "暂无自定义接口。",
   prov_name: "名称",
