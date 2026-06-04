@@ -17,10 +17,14 @@ import {
 /**
  * Provider dispatch for the generation proxy.
  *
- *  - "huggingface"            -> the ported HF engine (Phase 6a)
- *  - other builtin names      -> not yet ported (Phase 6b) -> provider_not_supported
- *  - anything else (a UUID)   -> a user/global custom provider, routed by its
- *                                stored format (OpenAI / Claude / Gemini) via ADAPTERS
+ * COMPILE BRIDGE (Task 1): the custom-provider call sites below were minimally
+ * rewired to the new AdapterContext signature so the tree compiles after the
+ * horizontal FormatAdapter change. The full capability-routing rewrite
+ * (resolveCustom, MODEL_NOT_FOUND, gradio/video/upscale dispatch) lands in Task 4.
+ *
+ *  - "huggingface"          -> the ported HF engine (kept until Phase 5 cleanup)
+ *  - other builtin names    -> provider_not_supported
+ *  - anything else (a UUID) -> custom/global provider, routed by stored format via ADAPTERS
  */
 
 const BUILTINS: ProviderId[] = ["huggingface", "gitee", "modelscope", "a4f", "openai", "google"];
