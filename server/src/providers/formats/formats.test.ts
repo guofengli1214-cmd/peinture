@@ -61,6 +61,21 @@ describe("OpenAI format adapter", () => {
     expect(c.body.messages[0].role).toBe("system");
     expect(c.body.messages[0].content).toContain("SYS");
   });
+
+  it("text honors a model endpointPath override (e.g. Pollinations /openai)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({ choices: [{ message: { content: "opt" } }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const c: AdapterContext = {
+      apiUrl: "https://text.pollinations.ai",
+      secret: null,
+      model: { modelId: "openai-fast", name: "x", capabilities: ["text"], endpointPath: "/openai" },
+    };
+    const out = await ADAPTERS.openai.text!(c, "cat", "SYS");
+
+    expect(out).toBe("opt");
+    expect(lastCall(fetchMock).url).toBe("https://text.pollinations.ai/openai");
+  });
 });
 
 describe("Claude format adapter", () => {

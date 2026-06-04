@@ -55,7 +55,8 @@ export const openaiAdapter: FormatAdapter = {
   },
 
   async text(c: AdapterContext, prompt: string, systemPrompt: string) {
-    const res = await fetchWithRetry(v1(c.apiUrl, "/chat/completions"), {
+    const url = c.model.endpointPath ? trimBase(c.apiUrl) + c.model.endpointPath : v1(c.apiUrl, "/chat/completions");
+    const res = await fetchWithRetry(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders(c.secret) },
       body: JSON.stringify({
