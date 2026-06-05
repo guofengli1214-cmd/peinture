@@ -57,6 +57,7 @@ export function hydrateFromServerConfig(cfg: ServerPublicConfig): void {
       storageType: cfg.storageType,
       s3Config: cfg.s3Config,
       webdavConfig: cfg.webdavConfig,
+      storageConfigured: cfg.storageConfigured,
       systemPrompt: cfg.systemPrompt,
       translationPrompt: cfg.translationPrompt,
       editModelConfig: cfg.editModelConfig,
@@ -90,7 +91,6 @@ export function selfEditableSnapshot(): ConfigPatch {
     guidanceScale: s.guidanceScale,
     autoTranslate: s.autoTranslate,
     enableHD: s.enableHD,
-    storageType: c.storageType,
     systemPrompt: c.systemPrompt,
     translationPrompt: c.translationPrompt,
     editModelConfig: c.editModelConfig,
@@ -98,8 +98,6 @@ export function selfEditableSnapshot(): ConfigPatch {
     textModelConfig: c.textModelConfig,
     upscalerModelConfig: c.upscalerModelConfig,
     videoSettings: c.videoSettings,
-    s3Config: c.s3Config as unknown as Record<string, unknown>,
-    webdavConfig: c.webdavConfig as unknown as Record<string, unknown>,
   };
 }
 

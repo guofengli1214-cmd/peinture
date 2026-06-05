@@ -6,8 +6,6 @@ import {
   Cpu,
   MessageSquareText,
   Film,
-  HardDrive,
-  Database,
 } from "lucide-react";
 import { useSettingsStore } from "../store/settingsStore";
 import { translations } from "../translations";
@@ -17,7 +15,6 @@ import { GeneralTab } from "./settings/GeneralTab";
 import { ModelsTab } from "./settings/ModelsTab";
 import { PromptTab } from "./settings/PromptTab";
 import { LiveTab } from "./settings/LiveTab";
-import { StorageTab } from "./settings/StorageTab";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -54,18 +51,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }, [isOpen]);
 
   const tabs = useMemo(() => {
-    const base = [
+    return [
       { id: "general", icon: Settings2, label: t.tab_general },
       { id: "models", icon: Cpu, label: t.model },
       { id: "prompt", icon: MessageSquareText, label: t.tab_prompt },
       { id: "live", icon: Film, label: t.tab_live },
     ];
-    if (form.storageType === "s3")
-      base.push({ id: "s3", icon: HardDrive, label: t.tab_storage });
-    else if (form.storageType === "webdav")
-      base.push({ id: "webdav", icon: Database, label: t.tab_webdav });
-    return base;
-  }, [t, form.storageType]);
+  }, [t]);
 
   const activeIndex = Math.max(
     0,
@@ -119,9 +111,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {tab.id === "general" && (
                     <GeneralTab
                       storageType={form.storageType}
-                      setStorageType={form.setStorageType}
+                      storageConfigured={form.storageConfigured}
                       onClearData={form.handleClearData}
-                      setActiveTab={form.setActiveTab as any}
                     />
                   )}
 
@@ -153,22 +144,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       provider={provider}
                       videoSettings={form.videoSettings}
                       setVideoSettings={form.setVideoSettings}
-                    />
-                  )}
-
-                  {(tab.id === "s3" || tab.id === "webdav") && (
-                    <StorageTab
-                      activeTab={tab.id}
-                      s3Config={form.s3Config}
-                      setS3Config={form.setS3Config}
-                      webdavConfig={form.webdavConfig}
-                      setWebdavConfig={form.setWebdavConfig}
-                      testS3Result={form.testS3Result}
-                      isTestingS3={form.isTestingS3}
-                      handleTestS3={form.handleTestS3}
-                      testWebDAVResult={form.testWebDAVResult}
-                      isTestingWebDAV={form.isTestingWebDAV}
-                      handleTestWebDAV={form.handleTestWebDAV}
                     />
                   )}
                 </div>

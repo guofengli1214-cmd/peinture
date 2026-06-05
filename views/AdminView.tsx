@@ -15,6 +15,7 @@ import {
 } from "../services/adminService";
 import { CreateUserForm } from "../components/admin/CreateUserForm";
 import { UserAccountActions } from "../components/admin/UserAccountActions";
+import { AdminStorageSettings } from "../components/admin/AdminStorageSettings";
 import { ProvidersManager } from "../components/ProvidersManager";
 import {
   listGlobalProviders,
@@ -166,6 +167,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ isOpen, onClose }) => {
           {!selectedUser ? (
             <div className="max-w-xl mx-auto flex flex-col gap-6">
               <p className="text-sm text-ink-tertiary">{t.admin_select_user}</p>
+              <section className="pt-4 border-t border-stroke-subtle">
+                <AdminStorageSettings />
+              </section>
               <section className="pt-4 border-t border-stroke-subtle">
                 <ProvidersManager
                   title={t.prov_global}

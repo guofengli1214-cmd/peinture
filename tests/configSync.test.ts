@@ -43,8 +43,15 @@ const serverConfig: ServerPublicConfig = {
     openai: false,
     google: false,
   },
-  s3Config: { accessKeyId: "AK", secretAccessKey: "SK" },
-  webdavConfig: { url: "https://dav", username: "u", password: "p", directory: "/d" },
+  s3Config: {
+    accessKeyId: "",
+    secretAccessKey: "",
+    bucket: "admin-bucket",
+    endpoint: "https://s3.example.com",
+  },
+  webdavConfig: { url: "https://dav", username: "", password: "", directory: "/d" },
+  storageConfigured: true,
+  storageManagedBy: "admin",
 };
 
 describe("configSync", () => {
@@ -80,7 +87,9 @@ describe("configSync", () => {
     expect(c.translationPrompt).toBe("TRANS");
     expect(c.openaiConfig).toEqual({ apiUrl: "https://oai", modelId: "gpt-x" });
     expect(c.googleConfig).toEqual({ apiUrl: "https://goog", modelId: "gemini-x" });
-    expect(c.s3Config.accessKeyId).toBe("AK");
+    expect(c.storageConfigured).toBe(true);
+    expect(c.s3Config.bucket).toBe("admin-bucket");
+    expect(c.s3Config.accessKeyId).toBe("");
     expect(c.webdavConfig.url).toBe("https://dav");
     expect(c.hasTokens.huggingface).toBe(true);
     expect(c.hasTokens.gitee).toBe(false);
@@ -106,11 +115,12 @@ describe("configSync", () => {
     expect(snap.language).toBe("zh");
     expect(snap.systemPrompt).toBe("SYS");
     expect(snap.steps).toBe(12);
-    expect(snap.s3Config).toBeDefined();
-    expect(snap.webdavConfig).toBeDefined();
 
     // Excluded (admin-locked)
     const raw = snap as Record<string, unknown>;
+    expect(raw.storageType).toBeUndefined();
+    expect(raw.s3Config).toBeUndefined();
+    expect(raw.webdavConfig).toBeUndefined();
     expect(raw.serviceMode).toBeUndefined();
     expect(raw.tokens).toBeUndefined();
     expect(raw.openaiConfig).toBeUndefined();

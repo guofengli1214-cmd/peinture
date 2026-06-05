@@ -13,7 +13,7 @@ A dark-themed AI image generator (React + TypeScript) converted into a **multi-u
 - **Server-sourced config** — every user's preferences live in MySQL and sync automatically; nothing sensitive is kept in the browser.
 - **Text-to-image / editing / prompt optimization** via **HuggingFace** (works out of the box; a HuggingFace token raises the quota).
 - **Custom / relay providers** — connect any platform or relay API and pick its format: **OpenAI**, **Claude** (text only), or **Gemini**. Configurable globally (admin), per-user (admin), or self-service (each user for themselves). Their models appear automatically in the model picker.
-- **Cloud storage** — optional S3-compatible or WebDAV sync (per-user credentials, encrypted).
+- **Cloud storage** — admin-managed S3-compatible or WebDAV sync shared by all users; credentials stay encrypted server-side.
 
 ### Feature status
 
@@ -35,6 +35,7 @@ Browser (SPA, holds only an httpOnly session cookie)
 nginx (web container) ── static SPA  +  reverse-proxy /api ──▶ Node API (api container)
                                                                  ├─ /api/auth       login / logout / me
                                                                  ├─ /api/config     current user's prefs
+                                                                 ├─ /api/storage    admin-managed storage proxy
                                                                  ├─ /api/providers  self custom providers
                                                                  ├─ /api/admin/*    user & provider management
                                                                  └─ /api/v1/*       generation proxy

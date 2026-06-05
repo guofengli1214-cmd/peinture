@@ -40,6 +40,7 @@ export interface ConfigState {
   storageType: StorageType;
   s3Config: S3Config;
   webdavConfig: WebDAVConfig;
+  storageConfigured: boolean;
 
   systemPrompt: string;
   translationPrompt: string;
@@ -102,6 +103,7 @@ export const useConfigStore = create<ConfigState>()((set) => ({
       storageType: "opfs",
       s3Config: DEFAULT_S3_CONFIG,
       webdavConfig: DEFAULT_WEBDAV_CONFIG,
+      storageConfigured: true,
 
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
       translationPrompt: DEFAULT_TRANSLATION_PROMPT,

@@ -33,6 +33,8 @@ const serverConfig = {
   },
   s3Config: { accessKeyId: "", secretAccessKey: "" },
   webdavConfig: { url: "", username: "", password: "", directory: "" },
+  storageConfigured: true,
+  storageManagedBy: "admin",
 };
 
 describe("configService", () => {

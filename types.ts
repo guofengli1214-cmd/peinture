@@ -195,6 +195,24 @@ export interface ServerPublicConfig {
     hasTokens: Record<ProviderId, boolean>;
     s3Config: S3Config;
     webdavConfig: WebDAVConfig;
+    storageConfigured: boolean;
+    storageManagedBy: "admin";
+}
+
+export interface AdminSystemStorage {
+    storageType: StorageType;
+    storageConfigured: boolean;
+    storageManagedBy: "admin";
+    s3Config: S3Config;
+    webdavConfig: WebDAVConfig;
+    hasS3Secret: boolean;
+    hasWebDAVPassword: boolean;
+}
+
+export interface AdminSystemStorageInput {
+    storageType?: StorageType;
+    s3Config?: Partial<S3Config>;
+    webdavConfig?: Partial<WebDAVConfig>;
 }
 
 export interface TokenStatus {

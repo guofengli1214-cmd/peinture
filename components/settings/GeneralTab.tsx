@@ -4,6 +4,7 @@ import {
   HardDrive,
   Trash2,
   AlertCircle,
+  Lock,
 } from "lucide-react";
 import { useSettingsStore } from "../../store/settingsStore";
 import { translations } from "../../translations";
@@ -11,20 +12,26 @@ import { StorageType } from "../../types";
 
 interface GeneralTabProps {
   storageType: StorageType;
-  setStorageType: (type: StorageType) => void;
+  storageConfigured: boolean;
   onClearData: () => void;
-  setActiveTab: (tab: any) => void;
 }
 
 export const GeneralTab: React.FC<GeneralTabProps> = ({
   storageType,
-  setStorageType,
+  storageConfigured,
   onClearData,
-  setActiveTab,
 }) => {
   const { language, setLanguage } = useSettingsStore();
   const t = translations[language];
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const storageLabel =
+    storageType === "s3"
+      ? t.storage_s3
+      : storageType === "webdav"
+        ? t.storage_webdav
+        : storageType === "opfs"
+          ? t.storage_opfs
+          : t.storage_off;
 
   return (
     <div className="space-y-6">
@@ -54,24 +61,27 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
           <HardDrive className="w-3.5 h-3.5 text-green-400" />
           {t.storage_service}
         </label>
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { id: "opfs", label: t.storage_opfs },
-            { id: "s3", label: t.storage_s3 },
-            { id: "webdav", label: t.storage_webdav },
-          ].map((option) => (
-            <button
-              key={option.id}
-              onClick={() => {
-                setStorageType(option.id as StorageType);
-                if (option.id === "s3") setActiveTab("s3");
-                if (option.id === "webdav") setActiveTab("webdav");
-              }}
-              className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 border ${storageType === option.id ? "bg-green-600 border-green-600 text-white shadow-card" : "bg-fill-subtle border-stroke text-ink-secondary hover:bg-fill hover:text-ink hover:border-stroke"}`}
+        <div className="rounded-xl border border-stroke bg-fill-subtle px-3 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-ink truncate">
+                {storageLabel}
+              </div>
+              <div className="text-xs text-ink-tertiary mt-0.5">
+                {t.storage_admin_managed}
+              </div>
+            </div>
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+                storageConfigured
+                  ? "bg-green-500/10 border-green-500/20 text-green-500"
+                  : "bg-red-500/10 border-red-500/20 text-red-400"
+              }`}
             >
-              {option.label}
-            </button>
-          ))}
+              <Lock className="w-3 h-3" />
+              {storageConfigured ? t.configured : t.storage_not_configured}
+            </div>
+          </div>
         </div>
       </div>
 

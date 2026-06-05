@@ -136,6 +136,10 @@ export const zh = {
   admin_user_updated: "用户已更新。",
   admin_user_deleted: "用户已删除。",
   admin_config_saved: "配置已保存。",
+  admin_storage_title: "系统存储",
+  admin_storage_desc: "仅管理员可配置，所有用户统一使用这里的存储服务。",
+  admin_storage_saved: "存储配置已保存。",
+  admin_secret_unchanged: "留空则保持当前密钥",
   admin_action_failed: "操作失败，请重试。",
   err_username_taken: "该用户名已被占用。",
 
@@ -193,6 +197,9 @@ export const zh = {
   storage_s3: "S3 存储",
   storage_webdav: "WebDAV",
   storage_opfs: "本地 (OPFS)",
+  storage_admin_managed: "由管理员统一配置，普通用户不可修改。",
+  storage_not_configured: "未配置",
+  configured: "已配置",
 
   s3_access_key: "访问 ID",
   s3_secret_key: "访问密钥",
@@ -319,7 +326,7 @@ export const zh = {
   faq_q9: "图片编辑功能是如何工作的？",
   faq_a9: "图片编辑器允许您利用 AI 修改现有图片。您可以在透明图层上绘画（使用画笔或矩形工具）来标注想要修改的区域，然后输入 AI 指令。系统会将您的涂鸦与原图合并，并发送给 Qwen-Image-Edit 模型进行处理。您还可以上传最多 3 张参考图，以引导 AI 的艺术风格或内容生成。",
   faq_q10: "云存储服务是如何工作的？",
-  faq_a10: "我们支持 S3 兼容的存储服务（如 AWS S3, Cloudflare R2, MinIO）以及 WebDAV。您可以在“设置 > 存储服务”中配置您的存储凭证。配置完成后，您可以将生成的图片或视频直接上传到您的私有云端。您的凭证仅保存在本地浏览器中，绝不会上传到我们的服务器。",
+  faq_a10: "我们支持 S3 兼容的存储服务（如 AWS S3, Cloudflare R2, MinIO）以及 WebDAV。存储服务由管理员在管理面板统一配置，普通用户通过后端代理上传和浏览作品，存储密钥加密保存在服务器数据库中，不会下发到普通用户前端。",
   faq_q11: "什么是 OPFS 存储？",
   faq_a11: "OPFS (源私有文件系统) 是浏览器提供的高性能本地存储空间。它允许应用将生成的图片和视频直接保存到您设备的虚拟驱动器中。存储在这里的数据是私有的，完全保留在您的设备上，绝不会上传到我们的服务器。请注意：清除浏览器的站点数据或缓存将会永久删除这些文件。",
   footer_license: "基于 MIT 协议发布。永久开源免费。",
@@ -399,8 +406,8 @@ export const zh = {
 
   // Gallery Setup Guide
   gallery_setup_title: "配置云端画廊",
-  gallery_setup_desc: "连接您的 S3 或 WebDAV 存储，随时随地查看您的创作。",
-  gallery_setup_btn: "配置存储服务",
+  gallery_setup_desc: "管理员配置 S3 或 WebDAV 存储后，即可在这里查看云端作品。",
+  gallery_setup_btn: "查看存储状态",
 
   share_link: "分享链接",
   share_success: "链接已复制！",

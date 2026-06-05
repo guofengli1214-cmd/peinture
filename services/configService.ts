@@ -17,7 +17,6 @@ export type ConfigPatch = Partial<{
   guidanceScale: number;
   autoTranslate: boolean;
   enableHD: boolean;
-  storageType: string;
   systemPrompt: string;
   translationPrompt: string;
   editModelConfig: { provider: string; model: string };
@@ -25,8 +24,6 @@ export type ConfigPatch = Partial<{
   textModelConfig: { provider: string; model: string };
   upscalerModelConfig: { provider: string; model: string };
   videoSettings: Record<string, unknown>;
-  s3Config: Record<string, unknown>;
-  webdavConfig: Record<string, unknown>;
 }>;
 
 /** Load the current user's full (non-secret) configuration. */

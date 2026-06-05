@@ -5,6 +5,7 @@ import {
   getProviderTokens,
   getCustomProviderWithToken,
 } from "./userConfig";
+import { updateSystemStorage } from "./systemStorage";
 import {
   buildTestContext,
   seedUser,
@@ -74,13 +75,29 @@ describe("userConfig", () => {
     expect(cfg.steps).toBe(20);
   });
 
-  it("a normal user can set their own storage credentials and read them back", async () => {
+  it("a normal user cannot change admin-managed storage credentials", async () => {
     const { ctx, userId } = await ctxWithUser();
+    await updateSystemStorage(ctx, {
+      storageType: "s3",
+      s3Config: {
+        accessKeyId: "AK_ADMIN",
+        secretAccessKey: "SK_ADMIN",
+        bucket: "admin-bucket",
+      },
+    });
+
     await applySelfUpdate(ctx, userId, {
-      s3Config: { accessKeyId: "AKIA", secretAccessKey: "shh", bucket: "b" },
+      storageType: "webdav",
+      s3Config: { accessKeyId: "AK_HACK", secretAccessKey: "SK_HACK", bucket: "hacked" },
     } as Record<string, unknown>);
+
     const cfg = await getPublicConfig(ctx, userId);
-    expect(cfg.s3Config.accessKeyId).toBe("AKIA");
+    expect(cfg.storageType).toBe("s3");
+    expect(cfg.storageConfigured).toBe(true);
+    expect(cfg.s3Config.bucket).toBe("admin-bucket");
+    expect(cfg.s3Config.accessKeyId).toBe("");
+    expect(JSON.stringify(cfg)).not.toContain("SK_ADMIN");
+    expect(JSON.stringify(cfg)).not.toContain("AK_HACK");
   });
 
   it("a custom provider token is hidden in the public view but readable by the proxy", async () => {

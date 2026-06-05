@@ -76,6 +76,18 @@ export interface UserSettingsRepository {
   upsert(userId: number, configJson: string, secretsEncrypted: string | null): Promise<void>;
 }
 
+export interface SystemStorageSettingsRecord {
+  id: 1;
+  configJson: string;
+  secretsEncrypted: string | null;
+  updatedAt: Date;
+}
+
+export interface SystemStorageSettingsRepository {
+  get(): Promise<SystemStorageSettingsRecord | null>;
+  upsert(configJson: string, secretsEncrypted: string | null): Promise<void>;
+}
+
 export type ProviderFormat = "openai" | "claude" | "gemini" | "gradio";
 export type ProviderScope = "global" | "user";
 export type ProviderManagedBy = "admin" | "self";
@@ -133,5 +145,6 @@ export interface Repositories {
   users: UserRepository;
   sessions: SessionRepository;
   settings: UserSettingsRepository;
+  systemStorageSettings: SystemStorageSettingsRepository;
   customProviders: CustomProviderRepository;
 }

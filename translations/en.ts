@@ -136,6 +136,10 @@ export const en = {
   admin_user_updated: "User updated.",
   admin_user_deleted: "User deleted.",
   admin_config_saved: "Configuration saved.",
+  admin_storage_title: "System Storage",
+  admin_storage_desc: "Only admins can configure this; all users use the same storage service.",
+  admin_storage_saved: "Storage configuration saved.",
+  admin_secret_unchanged: "Leave blank to keep the current secret",
   admin_action_failed: "Action failed. Please try again.",
   err_username_taken: "That username is already taken.",
 
@@ -192,6 +196,9 @@ export const en = {
   storage_s3: "S3 Storage",
   storage_webdav: "WebDAV",
   storage_opfs: "Local (OPFS)",
+  storage_admin_managed: "Managed by admins. Normal users cannot change it.",
+  storage_not_configured: "Not configured",
+  configured: "Configured",
   
   s3_access_key: "Access Key ID",
   s3_secret_key: "Secret Access Key",
@@ -318,7 +325,7 @@ export const en = {
   faq_q9: "How does the Image Editor work?",
   faq_a9: "The Image Editor allows you to modify existing images using AI. You can draw on a transparent layer (using Brush or Rectangle tools) to indicate where you want changes, then provide an AI command. The system merges your drawings with the original image and sends them to the Qwen-Image-Edit model. You can also upload up to 3 reference images to guide the AI's artistic style or content.",
   faq_q10: "How do Cloud Storage Services work?",
-  faq_a10: "We support S3-compatible storage (like AWS S3, Cloudflare R2, MinIO) and WebDAV. You can configure your own storage credentials in Settings > Storage. Once configured, you can upload your generated images/videos directly to your personal cloud. Your credentials are encrypted and stored locally in your browser; they are never uploaded to our servers.",
+  faq_a10: "We support S3-compatible storage (like AWS S3, Cloudflare R2, MinIO) and WebDAV. Storage is configured centrally by admins. Users upload and browse through the backend proxy, and storage secrets stay encrypted in the server database instead of being sent to normal-user browsers.",
   faq_q11: "What is Local Storage (OPFS)?",
   faq_a11: "OPFS (Origin Private File System) is a high-performance storage area within your browser. It allows the app to save generated images and videos directly to your device's virtual drive. Data stored here is private, stays on your device, and is never uploaded to our servers. However, please note that clearing your browser's site data/cache will delete these files permanently.",
   footer_license: "Released under the MIT License. Open source and free forever.",
@@ -398,8 +405,8 @@ export const en = {
   
   // Gallery Setup Guide
   gallery_setup_title: "Configure Cloud Gallery",
-  gallery_setup_desc: "Connect your S3 or WebDAV storage to view your generated creations anywhere.",
-  gallery_setup_btn: "Configure Storage",
+  gallery_setup_desc: "Ask an admin to configure S3 or WebDAV storage to view cloud creations here.",
+  gallery_setup_btn: "View Storage Status",
 
   share_link: "Share Link",
   share_success: "Link copied!",

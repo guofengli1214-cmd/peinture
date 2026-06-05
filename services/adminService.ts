@@ -1,4 +1,9 @@
-import { AdminUser, UserRole } from "../types";
+import {
+  AdminSystemStorage,
+  AdminSystemStorageInput,
+  AdminUser,
+  UserRole,
+} from "../types";
 
 /**
  * Admin API client for /api/admin/*. All calls send the session cookie and
@@ -73,4 +78,25 @@ export const deleteUser = async (id: number): Promise<void> => {
     credentials: "include",
   });
   if (!response.ok) await parseError(response, "delete_user_failed");
+};
+
+export const getSystemStorage = async (): Promise<AdminSystemStorage> => {
+  const response = await fetch("/api/admin/storage", { credentials: "include" });
+  if (!response.ok) await parseError(response, "get_storage_failed");
+  const { storage } = await response.json();
+  return storage as AdminSystemStorage;
+};
+
+export const updateSystemStorage = async (
+  input: AdminSystemStorageInput,
+): Promise<AdminSystemStorage> => {
+  const response = await fetch("/api/admin/storage", {
+    method: "PUT",
+    credentials: "include",
+    headers: JSON_HEADERS,
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) await parseError(response, "update_storage_failed");
+  const { storage } = await response.json();
+  return storage as AdminSystemStorage;
 };

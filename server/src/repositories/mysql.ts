@@ -8,6 +8,8 @@ import type {
   Repositories,
   SessionRecord,
   SessionRepository,
+  SystemStorageSettingsRecord,
+  SystemStorageSettingsRepository,
   UpdateCustomProviderInput,
   UpdateUserInput,
   UserRecord,
@@ -259,11 +261,39 @@ class MysqlUserSettingsRepository implements UserSettingsRepository {
   }
 }
 
+class MysqlSystemStorageSettingsRepository implements SystemStorageSettingsRepository {
+  constructor(private pool: Pool) {}
+
+  async get(): Promise<SystemStorageSettingsRecord | null> {
+    const [rows] = await this.pool.query<RowDataPacket[]>(
+      "SELECT * FROM system_storage_settings WHERE id = 1",
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      id: 1,
+      configJson: row.config_json,
+      secretsEncrypted: row.secrets_encrypted ?? null,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  async upsert(configJson: string, secretsEncrypted: string | null): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO system_storage_settings (id, config_json, secrets_encrypted)
+       VALUES (1, ?, ?)
+       ON DUPLICATE KEY UPDATE config_json = VALUES(config_json), secrets_encrypted = VALUES(secrets_encrypted)`,
+      [configJson, secretsEncrypted],
+    );
+  }
+}
+
 export function createMysqlRepositories(pool: Pool): Repositories {
   return {
     users: new MysqlUserRepository(pool),
     sessions: new MysqlSessionRepository(pool),
     settings: new MysqlUserSettingsRepository(pool),
+    systemStorageSettings: new MysqlSystemStorageSettingsRepository(pool),
     customProviders: new MysqlCustomProviderRepository(pool),
   };
 }

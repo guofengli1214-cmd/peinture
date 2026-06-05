@@ -7,6 +7,8 @@ import type {
   Repositories,
   SessionRecord,
   SessionRepository,
+  SystemStorageSettingsRecord,
+  SystemStorageSettingsRepository,
   UpdateCustomProviderInput,
   UpdateUserInput,
   UserRecord,
@@ -124,6 +126,18 @@ class MemoryUserSettingsRepository implements UserSettingsRepository {
   }
 }
 
+class MemorySystemStorageSettingsRepository implements SystemStorageSettingsRepository {
+  private row: SystemStorageSettingsRecord | null = null;
+
+  async get(): Promise<SystemStorageSettingsRecord | null> {
+    return this.row;
+  }
+
+  async upsert(configJson: string, secretsEncrypted: string | null): Promise<void> {
+    this.row = { id: 1, configJson, secretsEncrypted, updatedAt: new Date() };
+  }
+}
+
 class MemoryCustomProviderRepository implements CustomProviderRepository {
   private rows = new Map<string, CustomProviderRecord>();
 
@@ -175,6 +189,7 @@ export function createMemoryRepositories(): Repositories {
     users: new MemoryUserRepository(),
     sessions: new MemorySessionRepository(),
     settings: new MemoryUserSettingsRepository(),
+    systemStorageSettings: new MemorySystemStorageSettingsRepository(),
     customProviders: new MemoryCustomProviderRepository(),
   };
 }

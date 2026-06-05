@@ -55,10 +55,86 @@ export const isWebDAVConfigured = (config: WebDAVConfig): boolean => {
 
 export const isStorageConfigured = (): boolean => {
   const type = getStorageType();
-  if (type === "s3") return isS3Configured(getS3Config());
-  if (type === "webdav") return isWebDAVConfigured(getWebDAVConfig());
+  if (type === "s3" || type === "webdav")
+    return !!useConfigStore.getState().storageConfigured;
   if (type === "opfs") return true;
   return false;
+};
+
+const isManagedStorageType = (type: StorageType) =>
+  type === "s3" || type === "webdav";
+
+async function parseStorageError(response: Response, fallback: string): Promise<never> {
+  let code = fallback;
+  try {
+    const data = await response.json();
+    if (data?.error) code = data.error;
+  } catch {
+    /* non-JSON body */
+  }
+  throw new Error(code);
+}
+
+const uploadToManagedStorage = async (
+  blob: Blob,
+  fileName: string,
+  contentType: string,
+): Promise<string> => {
+  const form = new FormData();
+  form.append("file", blob, fileName);
+  form.append("fileName", fileName);
+  form.append("contentType", contentType || blob.type || "application/octet-stream");
+
+  const response = await fetch("/api/storage/upload", {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  if (!response.ok) await parseStorageError(response, "storage_upload_failed");
+  const { url } = await response.json();
+  return String(url);
+};
+
+const listManagedCloudFiles = async (): Promise<CloudFile[]> => {
+  const response = await fetch("/api/storage/files", { credentials: "include" });
+  if (!response.ok) await parseStorageError(response, "storage_list_failed");
+  const { files } = await response.json();
+  return (files as Array<CloudFile & { lastModified: string }>).map((f) => ({
+    ...f,
+    lastModified: new Date(f.lastModified),
+  }));
+};
+
+const fetchManagedCloudBlob = async (keyOrUrl: string): Promise<Blob> => {
+  const response = await fetch(
+    `/api/storage/blob?keyOrUrl=${encodeURIComponent(keyOrUrl)}`,
+    { credentials: "include" },
+  );
+  if (!response.ok) await parseStorageError(response, "storage_fetch_failed");
+  return response.blob();
+};
+
+const deleteManagedCloudFile = async (keyOrUrl: string): Promise<void> => {
+  const response = await fetch("/api/storage/file", {
+    method: "DELETE",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ keyOrUrl }),
+  });
+  if (!response.ok) await parseStorageError(response, "storage_delete_failed");
+};
+
+const renameManagedCloudFile = async (
+  oldKeyOrUrl: string,
+  newKeyOrUrl: string,
+): Promise<void> => {
+  const response = await fetch("/api/storage/rename", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ oldKeyOrUrl, newKeyOrUrl }),
+  });
+  if (!response.ok) await parseStorageError(response, "storage_rename_failed");
 };
 
 // --- Helper ---
@@ -263,7 +339,9 @@ export const uploadToCloud = async (
   }
 
   let fileUrl: string;
-  if (type === "s3") {
+  if (isManagedStorageType(type)) {
+    fileUrl = await uploadToManagedStorage(finalBlob, finalFileName, finalBlob.type);
+  } else if (type === "s3") {
     const config = getS3Config();
     fileUrl = await uploadToS3(
       finalBlob,
@@ -295,7 +373,9 @@ export const uploadToCloud = async (
         type: "application/json",
       });
 
-      if (type === "s3") {
+      if (isManagedStorageType(type)) {
+        await uploadToManagedStorage(jsonBlob, metadataFileName, "application/json");
+      } else if (type === "s3") {
         const config = getS3Config();
         await uploadToS3(
           jsonBlob,
@@ -320,7 +400,9 @@ export const uploadToCloud = async (
 export const listCloudFiles = async (): Promise<CloudFile[]> => {
   const type = getStorageType();
 
-  if (type === "s3") {
+  if (isManagedStorageType(type)) {
+    return listManagedCloudFiles();
+  } else if (type === "s3") {
     const config = getS3Config();
     return listS3Files(config);
   } else if (type === "webdav") {
@@ -338,6 +420,10 @@ export const fetchCloudBlob = async (url: string): Promise<Blob> => {
   // Explicit OPFS protocol handling
   if (url.startsWith("opfs://")) {
     return fetchOPFSBlob(url);
+  }
+
+  if (isManagedStorageType(type)) {
+    return fetchManagedCloudBlob(url);
   }
 
   let headers: Record<string, string> = {};
@@ -395,7 +481,9 @@ export const deleteCloudFile = async (keyOrUrl: string): Promise<void> => {
       ? `${id}.metadata.json`
       : `${keyOrUrl}.metadata.json`;
 
-    if (type === "s3") {
+    if (isManagedStorageType(type)) {
+      await deleteManagedCloudFile(jsonKeyOrUrl).catch(() => {});
+    } else if (type === "s3") {
       const config = getS3Config();
       await deleteS3Object(config, jsonKeyOrUrl).catch(() => {});
     } else if (type === "webdav") {
@@ -408,7 +496,9 @@ export const deleteCloudFile = async (keyOrUrl: string): Promise<void> => {
     console.warn("Metadata delete failed, ignoring", e);
   }
 
-  if (type === "s3") {
+  if (isManagedStorageType(type)) {
+    return deleteManagedCloudFile(keyOrUrl);
+  } else if (type === "s3") {
     const config = getS3Config();
     return deleteS3Object(config, keyOrUrl);
   } else if (type === "webdav") {
@@ -425,7 +515,9 @@ export const renameCloudFile = async (
 ): Promise<void> => {
   const type = getStorageType();
 
-  if (type === "s3") {
+  if (isManagedStorageType(type)) {
+    await renameManagedCloudFile(oldKeyOrUrl, newKeyOrUrl);
+  } else if (type === "s3") {
     const config = getS3Config();
     await performS3Rename(config, oldKeyOrUrl, newKeyOrUrl);
   } else if (type === "webdav") {

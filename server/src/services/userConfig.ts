@@ -1,12 +1,17 @@
 import type { AppContext } from "../context";
+import {
+  getPublicSystemStorage,
+  type PublicSystemStorage,
+} from "./systemStorage";
 
 /**
  * Per-user configuration service.
  *
- * Storage model (per user, in `user_settings`):
+ * Storage model:
  *   - config_json:        non-sensitive settings (mirrors the frontend stores)
  *   - secrets_encrypted:  AES-256-GCM JSON of provider tokens, custom-provider
- *                         tokens, and storage credentials
+ *                         tokens, plus legacy per-user storage credentials
+ *   - system_storage_settings: one admin-managed storage service for all users
  *
  * Security rules enforced here:
  *   - Provider tokens and custom-provider tokens are NEVER returned to clients;
@@ -14,8 +19,9 @@ import type { AppContext } from "../context";
  *     server-side via getProviderTokens / getCustomProviderWithToken.
  *   - Normal users (self-update) cannot change admin-locked keys (tokens,
  *     custom providers, provider endpoints, service mode). Admins can set anything.
- *   - Storage credentials (S3 / WebDAV) are the user's own and are returned to
- *     the owner so client-side uploads keep working.
+ *   - Storage is admin-managed. Normal users cannot change storageType or
+ *     credentials; public config exposes only sanitized storage metadata and a
+ *     configured flag. Cloud operations use the server-side storage proxy.
  */
 
 export const PROVIDER_IDS = [
@@ -97,6 +103,8 @@ export interface PublicConfig extends UserConfig {
   customProviders: Array<CustomProviderMeta & { hasToken: boolean }>;
   s3Config: S3Config;
   webdavConfig: WebDAVConfig;
+  storageConfigured: boolean;
+  storageManagedBy: "admin";
 }
 
 const DEFAULT_SYSTEM_PROMPT = `I am a master AI image prompt engineering advisor, specializing in crafting prompts that yield cinematic, hyper-realistic, and deeply evocative visual narratives, optimized for advanced generative models.
@@ -167,7 +175,6 @@ const SELF_EDITABLE_KEYS: (keyof UserConfig)[] = [
   "guidanceScale",
   "autoTranslate",
   "enableHD",
-  "storageType",
   "systemPrompt",
   "translationPrompt",
   "editModelConfig",
@@ -224,26 +231,34 @@ export async function saveRaw(
 
 // --- Public (sanitized) view ---
 
-export function toPublicConfig(config: UserConfig, secrets: SecretBundle): PublicConfig {
+export function toPublicConfig(
+  config: UserConfig,
+  secrets: SecretBundle,
+  storage: PublicSystemStorage,
+): PublicConfig {
   const hasTokens = {} as Record<ProviderId, boolean>;
   for (const id of PROVIDER_IDS) {
     hasTokens[id] = (secrets.tokens[id]?.length ?? 0) > 0;
   }
   return {
     ...config,
+    storageType: storage.storageType,
     customProviders: config.customProviders.map((p) => ({
       ...p,
       hasToken: !!secrets.customProviderTokens[p.id],
     })),
     hasTokens,
-    s3Config: secrets.s3Config,
-    webdavConfig: secrets.webdavConfig,
+    s3Config: storage.s3Config,
+    webdavConfig: storage.webdavConfig,
+    storageConfigured: storage.storageConfigured,
+    storageManagedBy: storage.storageManagedBy,
   };
 }
 
 export async function getPublicConfig(ctx: AppContext, userId: number): Promise<PublicConfig> {
   const { config, secrets } = await loadRaw(ctx, userId);
-  return toPublicConfig(config, secrets);
+  const storage = await getPublicSystemStorage(ctx);
+  return toPublicConfig(config, secrets, storage);
 }
 
 // --- Updates ---
@@ -260,12 +275,9 @@ export async function applySelfUpdate(
       (config as unknown as Record<string, unknown>)[key] = patch[key];
     }
   }
-  // Storage credentials are the user's own.
-  if (patch.s3Config !== undefined) secrets.s3Config = patch.s3Config as S3Config;
-  if (patch.webdavConfig !== undefined) secrets.webdavConfig = patch.webdavConfig as WebDAVConfig;
-
   await saveRaw(ctx, userId, config, secrets);
-  return toPublicConfig(config, secrets);
+  const storage = await getPublicSystemStorage(ctx);
+  return toPublicConfig(config, secrets, storage);
 }
 
 export async function seedDefaultSettings(ctx: AppContext, userId: number): Promise<void> {

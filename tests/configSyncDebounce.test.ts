@@ -40,6 +40,8 @@ const serverConfig: ServerPublicConfig = {
   hasTokens: { huggingface: false, gitee: false, modelscope: false, a4f: false, openai: false, google: false },
   s3Config: { accessKeyId: "", secretAccessKey: "" },
   webdavConfig: { url: "", username: "", password: "", directory: "" },
+  storageConfigured: true,
+  storageManagedBy: "admin",
 };
 
 describe("configSync debounced server sync", () => {

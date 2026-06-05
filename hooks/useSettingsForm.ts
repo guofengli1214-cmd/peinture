@@ -37,6 +37,7 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
     openaiConfig: initialOpenaiConfig,
     googleConfig: initialGoogleConfig,
   } = useConfigStore();
+  const storageConfigured = useConfigStore((s) => s.storageConfigured);
 
   // Composed sub-hooks
   const tokensForm = useTokensForm();
@@ -334,8 +335,6 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
     saveTranslationPromptContent(translationPrompt);
     saveVideoSettings(provider, videoSettings);
 
-    storageForm.saveStorage();
-
     saveEditModelConfig(editModelValue);
     saveLiveModelConfig(liveModelValue);
     saveTextModelConfig(textModelValue);
@@ -410,6 +409,7 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
 
     // Storage (from composed hook)
     ...storageForm,
+    storageConfigured,
 
     handleSave,
   };

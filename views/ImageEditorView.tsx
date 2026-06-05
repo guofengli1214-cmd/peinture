@@ -24,7 +24,6 @@ import {
   listCloudFiles,
   getStorageType,
   fetchCloudBlob,
-  getS3Config,
 } from "../services/storageService";
 import { CloudFile } from "../types";
 import { ImageComparison } from "../components/ImageComparison";
@@ -425,11 +424,9 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
     if (!showGalleryModal || !isStorageEnabled) return;
 
     const type = getStorageType();
-    // For OPFS, WebDAV, or Private S3, we need to fetch blobs to display them
+    // Managed storage and OPFS load through the app proxy for reliable display.
     const useProxyLoading =
-      type === "webdav" ||
-      type === "opfs" ||
-      (type === "s3" && !getS3Config().publicDomain);
+      type === "s3" || type === "webdav" || type === "opfs";
 
     if (!useProxyLoading) return;
 

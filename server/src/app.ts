@@ -5,6 +5,8 @@ import { createAuthRouter } from "./routes/auth";
 import { createConfigRouter } from "./routes/config";
 import { createAdminRouter } from "./routes/adminUsers";
 import { createAdminProviderRouter } from "./routes/adminProviders";
+import { createAdminStorageRouter } from "./routes/adminStorage";
+import { createStorageRouter } from "./routes/storage";
 import { createV1Router } from "./routes/v1";
 
 /**
@@ -23,8 +25,10 @@ export function createApp(ctx: AppContext): Express {
 
   app.use("/api/auth", createAuthRouter(ctx));
   app.use("/api/config", createConfigRouter(ctx));
+  app.use("/api/storage", createStorageRouter(ctx));
   app.use("/api/admin", createAdminRouter(ctx));
   app.use("/api/admin", createAdminProviderRouter(ctx));
+  app.use("/api/admin", createAdminStorageRouter(ctx));
   app.use("/api/v1", createV1Router(ctx));
 
   // Unknown API routes -> JSON 404 (must stay last among /api handlers).

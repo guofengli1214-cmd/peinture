@@ -21,7 +21,6 @@ import {
   fetchCloudBlob,
   renameCloudFile,
   getFileId,
-  getS3Config,
 } from "../services/storageService";
 import { downloadImage, generateUUID } from "../services/utils";
 import { Tooltip } from "../components/Tooltip";
@@ -58,6 +57,7 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
   );
   const [isConfigured, setIsConfigured] = useState(false);
   const [localUrls, setLocalUrls] = useState<Record<string, string>>({});
+  const localUrlsRef = useRef<Record<string, string>>({});
 
   // Fullscreen View
   const [fullscreenImage, setFullscreenImage] = useState<CloudFile | null>(
@@ -97,30 +97,39 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Sequential Loading Effect for WebDAV, Private S3, or OPFS
+  useEffect(() => {
+    localUrlsRef.current = localUrls;
+  }, [localUrls]);
+
+  // Sequential Loading Effect for managed storage or OPFS
   useEffect(() => {
     const type = getStorageType();
-    const isS3Private = type === "s3" && !getS3Config().publicDomain;
-    const isWebDAV = type === "webdav";
-    const isOPFS = type === "opfs";
+    const shouldProxyLoad =
+      type === "s3" || type === "webdav" || type === "opfs";
 
-    if (!isWebDAV && !isS3Private && !isOPFS) return;
+    if (!shouldProxyLoad) return;
 
     let isCancelled = false;
-    const createdUrls: { key: string; url: string }[] = [];
 
     const loadImagesSequentially = async () => {
       const filesToLoad: CloudFile[] = files;
       for (const file of filesToLoad) {
         if (isCancelled) break;
-        if (localUrls[file.key]) continue;
+        if (localUrlsRef.current[file.key]) continue;
 
         try {
           const blob = await fetchCloudBlob(file.url);
           if (!isCancelled) {
             const url = URL.createObjectURL(blob);
-            createdUrls.push({ key: file.key, url });
-            setLocalUrls((prev) => ({ ...prev, [file.key]: url }));
+            setLocalUrls((prev) => {
+              if (prev[file.key]) {
+                URL.revokeObjectURL(url);
+                return prev;
+              }
+              const next = { ...prev, [file.key]: url };
+              localUrlsRef.current = next;
+              return next;
+            });
           }
         } catch {
           console.error(`Failed to load cloud image: ${file.key}`);
@@ -134,19 +143,42 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
 
     return () => {
       isCancelled = true;
-      // Revoke URLs created during this cancelled run to prevent leaks
-      createdUrls.forEach(({ url }) => URL.revokeObjectURL(url));
     };
-  }, [files, localUrls]);
+  }, [files]);
+
+  // Revoke Object URLs for files that left the gallery.
+  useEffect(() => {
+    const fileKeys = new Set(files.map((file) => file.key));
+    setLocalUrls((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      Object.entries(prev).forEach(([key, url]) => {
+        if (!fileKeys.has(key)) {
+          URL.revokeObjectURL(url);
+          delete next[key];
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        localUrlsRef.current = next;
+        return next;
+      }
+
+      return prev;
+    });
+  }, [files]);
 
   // Cleanup ObjectURLs on unmount
   useEffect(() => {
     return () => {
-      Object.values(localUrls).forEach((url) =>
-        URL.revokeObjectURL(url as string),
-      );
+      Object.values(localUrlsRef.current).forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+      localUrlsRef.current = {};
     };
-  }, [localUrls]);
+  }, []);
 
   // Infinite Scroll Observer
   useEffect(() => {
@@ -254,9 +286,7 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
       const type = getStorageType();
       if (
         !downloadUrl.startsWith("blob:") &&
-        (type === "webdav" ||
-          type === "opfs" ||
-          (type === "s3" && !getS3Config().publicDomain))
+        (type === "s3" || type === "webdav" || type === "opfs")
       ) {
         const blob = await fetchCloudBlob(downloadUrl);
         downloadUrl = window.URL.createObjectURL(blob);
@@ -352,9 +382,7 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
   );
   const type = getStorageType();
   const useProxyLoading =
-    type === "webdav" ||
-    type === "opfs" ||
-    (type === "s3" && !getS3Config().publicDomain);
+    type === "s3" || type === "webdav" || type === "opfs";
 
   return (
     <div className="w-full h-full flex flex-col p-4 animate-in fade-in duration-500">
@@ -486,7 +514,8 @@ export const CloudGalleryView: React.FC<CloudGalleryViewProps> = ({
                           src={displayUrl}
                           alt={file.key}
                           className={`w-full h-auto object-cover block transition-all duration-700 group-hover:scale-105 ${isNSFW ? "blur-xl" : ""}`}
-                          loading="lazy"
+                          loading="eager"
+                          decoding="async"
                         />
                       )
                     ) : (
