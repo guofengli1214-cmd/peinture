@@ -54,7 +54,7 @@ export function createV1Router(ctx: AppContext): Router {
       // The user's custom / relay provider models (global + own, enabled).
       const customRecs = await effectiveForUser(ctx, userId);
       const models = customRecs.flatMap((r) =>
-        customModelsToClient(r.id, parseModelsJson(r.modelsJson)),
+        customModelsToClient(r.id, parseModelsJson(r.modelsJson), r.name),
       );
       res.json(models);
     } catch (e) {
@@ -78,6 +78,7 @@ export function createV1Router(ctx: AppContext): Router {
       });
       res.json(result);
     } catch (e) {
+      console.error("[v1/generate] failed", e);
       sendError(res, 502, (e as Error).message || "generationFailed");
     }
   });
@@ -112,6 +113,7 @@ export function createV1Router(ctx: AppContext): Router {
       });
       res.json(result);
     } catch (e) {
+      console.error("[v1/edit] failed", e);
       sendError(res, 502, (e as Error).message || "generationFailed");
     }
   });

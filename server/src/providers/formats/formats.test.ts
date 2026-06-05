@@ -4,6 +4,42 @@ import type { AdapterContext, ModelDef } from "./shared";
 
 const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body, text: async () => "" });
 
+function okStream(chunks: string[]) {
+  const encoder = new TextEncoder();
+  return {
+    ok: true,
+    status: 200,
+    body: new ReadableStream({
+      start(controller) {
+        chunks.forEach((chunk) => controller.enqueue(encoder.encode(chunk)));
+        controller.close();
+      },
+    }),
+    json: async () => ({}),
+    text: async () => chunks.join(""),
+  };
+}
+
+function okStreamThenError(chunks: string[], error: Error) {
+  const encoder = new TextEncoder();
+  let index = 0;
+  return {
+    ok: true,
+    status: 200,
+    body: new ReadableStream({
+      pull(controller) {
+        if (index < chunks.length) {
+          controller.enqueue(encoder.encode(chunks[index++]));
+          return;
+        }
+        controller.error(error);
+      },
+    }),
+    json: async () => ({}),
+    text: async () => chunks.join(""),
+  };
+}
+
 function lastCall(mock: ReturnType<typeof vi.fn>) {
   const [url, init] = mock.mock.calls[mock.mock.calls.length - 1];
   return { url, init, body: init?.body ? JSON.parse(init.body) : undefined, headers: init?.headers ?? {} };
@@ -47,6 +83,132 @@ describe("OpenAI format adapter", () => {
 
     expect(lastCall(fetchMock).url).toBe("https://api.openai.com/v1/images/generations");
     expect(res.url).toBe("data:image/png;base64,QUJD");
+  });
+
+  it("edit defaults to /v1/images/edits multipart", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({ data: [{ url: "https://img/edit.png" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await ADAPTERS.openai.edit!(
+      ctx("https://relay.example.com", "sk-x", "gpt-image-1"),
+      [new Blob(["abc"], { type: "image/png" })],
+      "make it brighter",
+      { width: 1024, height: 1024 },
+    );
+
+    expect(res.url).toBe("https://img/edit.png");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://relay.example.com/v1/images/edits");
+    expect(init.method).toBe("POST");
+    expect(init.headers["Authorization"]).toBe("Bearer sk-x");
+    expect(init.headers["Content-Type"]).toBeUndefined();
+    expect(init.body).toBeInstanceOf(FormData);
+  });
+
+  it("edit can route through /v1/images/generations with JSON image references", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({ data: [{ url: "https://img/right-code.png" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const c: AdapterContext = {
+      apiUrl: "https://www.right.codes/draw",
+      secret: "sk-rc",
+      model: {
+        modelId: "gpt-image-2",
+        name: "GPT Image 2",
+        capabilities: ["image", "edit"],
+        editEndpoint: "generations",
+      },
+    };
+    const res = await ADAPTERS.openai.edit!(
+      c,
+      [new Blob(["abc"], { type: "image/png" })],
+      "change the background",
+      { width: 1024, height: 768 },
+    );
+
+    expect(res.url).toBe("https://img/right-code.png");
+    const call = lastCall(fetchMock);
+    expect(call.url).toBe("https://www.right.codes/draw/v1/images/generations");
+    expect(call.init.method).toBe("POST");
+    expect(call.headers["Content-Type"]).toBe("application/json");
+    expect(call.headers["Authorization"]).toBe("Bearer sk-rc");
+    expect(call.body).toMatchObject({
+      model: "gpt-image-2",
+      prompt: "change the background",
+      size: "1024x768",
+      response_format: "url",
+    });
+    expect(call.body.image).toEqual(["YWJj"]);
+  });
+
+  it("edit can route through streamed /v1/chat/completions and extract an image URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okStream([
+        'data: {"choices":[{"delta":{"content":"done: ![image](https://file.example.com/out"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":".png)"}}]}\n\n',
+        "data: [DONE]\n\n",
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const c: AdapterContext = {
+      apiUrl: "https://www.right.codes/draw",
+      secret: "sk-rc",
+      model: {
+        modelId: "gpt-image-2",
+        name: "GPT Image 2",
+        capabilities: ["image", "edit"],
+        editEndpoint: "chatCompletions",
+      },
+    };
+    const res = await ADAPTERS.openai.edit!(
+      c,
+      [new Blob(["abc"], { type: "image/png" })],
+      "change the background",
+      {},
+    );
+
+    expect(res.url).toBe("https://file.example.com/out.png");
+    const call = lastCall(fetchMock);
+    expect(call.url).toBe("https://www.right.codes/draw/v1/chat/completions");
+    expect(call.init.method).toBe("POST");
+    expect(call.headers["Content-Type"]).toBe("application/json");
+    expect(call.headers["Authorization"]).toBe("Bearer sk-rc");
+    expect(call.body.model).toBe("gpt-image-2");
+    expect(call.body.stream).toBe(true);
+    expect(call.body.messages[0].content).toEqual([
+      { type: "text", text: "change the background" },
+      { type: "image_url", image_url: { url: "data:image/png;base64,YWJj" } },
+    ]);
+  });
+
+  it("returns a streamed chat image URL even if the upstream resets afterward", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okStreamThenError(
+        ['data: {"choices":[{"delta":{"content":"https://file.example.com/out.png"}}]}\n\n'],
+        new TypeError("terminated"),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const c: AdapterContext = {
+      apiUrl: "https://www.right.codes/draw",
+      secret: "sk-rc",
+      model: {
+        modelId: "gpt-image-2",
+        name: "GPT Image 2",
+        capabilities: ["image", "edit"],
+        editEndpoint: "chatCompletions",
+      },
+    };
+    const res = await ADAPTERS.openai.edit!(
+      c,
+      [new Blob(["abc"], { type: "image/png" })],
+      "change the background",
+      {},
+    );
+
+    expect(res.url).toBe("https://file.example.com/out.png");
   });
 
   it("text posts to /v1/chat/completions and parses content", async () => {

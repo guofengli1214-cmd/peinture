@@ -52,7 +52,10 @@ export function buildCleanModels(
       capabilities: m.capabilities,
       enabled: m.enabled !== false,
     };
-    if (format === "openai" && m.endpointPath) base.endpointPath = m.endpointPath;
+    if (format === "openai") {
+      if (m.endpointPath) base.endpointPath = m.endpointPath;
+      if (m.editEndpoint) base.editEndpoint = m.editEndpoint;
+    }
     if (format === "gradio") {
       let parsed: unknown;
       try {

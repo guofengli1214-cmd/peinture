@@ -27,6 +27,13 @@ describe("customModelsToClient enabled filtering", () => {
     ] as any);
     expect(out.map((m) => m.id)).toEqual(["p1:a", "p1:b"]);
   });
+
+  it("includes the upstream provider name when supplied", () => {
+    const out = customModelsToClient("p1", [
+      { modelId: "a", name: "A", capabilities: ["image"] },
+    ], "Right Code");
+    expect(out[0].providerName).toBe("Right Code");
+  });
 });
 
 describe("token retry", () => {

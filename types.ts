@@ -115,6 +115,7 @@ export interface ServerCustomProvider {
 // --- User-defined / relay API providers (OpenAI / Claude / Gemini / Gradio formats) ---
 export type ApiProviderFormat = 'openai' | 'claude' | 'gemini' | 'gradio';
 export type ApiProviderCapability = 'image' | 'edit' | 'text' | 'video' | 'upscale';
+export type ApiProviderOpenAIEditEndpoint = 'edits' | 'generations' | 'chatCompletions';
 
 export interface GradioModelConfig {
     baseUrl: string;
@@ -134,6 +135,7 @@ export interface ApiProviderModelDef {
     capabilities: ApiProviderCapability[];
     enabled?: boolean;
     endpointPath?: string;
+    editEndpoint?: ApiProviderOpenAIEditEndpoint;
     gradio?: GradioModelConfig;
 }
 
@@ -212,6 +214,7 @@ export interface GenerationParams {
 export interface RemoteModel {
   id: string;
   name: string;
+  providerName?: string;
   type: string[];
   steps?: {
     range: [number, number];

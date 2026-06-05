@@ -30,7 +30,24 @@ export const ModelsTab: React.FC<ModelsTabProps> = (props) => {
 
     props.customProviders.forEach((cp) => {
       const models = cp.models[type];
-      if (models && models.length > 0) {
+      if (!models || models.length === 0) return;
+
+      if (cp.id === "server") {
+        const byProvider = new Map<string, typeof models>();
+        models.forEach((m) => {
+          const label = m.providerName || cp.name;
+          byProvider.set(label, [...(byProvider.get(label) ?? []), m]);
+        });
+        byProvider.forEach((providerModels, label) => {
+          groups.push({
+            label,
+            options: providerModels.map((m) => ({
+              label: m.name,
+              value: `${cp.id}:${m.id}`,
+            })),
+          });
+        });
+      } else {
         groups.push({
           label: cp.name,
           options: models.map((m) => ({

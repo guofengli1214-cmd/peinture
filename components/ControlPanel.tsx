@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Select, OptionGroup } from "./Select";
 import { Tooltip } from "./Tooltip";
 import {
@@ -15,8 +15,8 @@ import {
   getModelConfig,
   getGuidanceScaleConfig,
 } from "../constants";
-import { getCustomProviders } from "../services/utils";
 import { useSettingsStore } from "../store/settingsStore";
+import { useConfigStore } from "../store/configStore";
 import { translations } from "../translations";
 
 export const ControlPanel: React.FC = () => {
@@ -40,7 +40,7 @@ export const ControlPanel: React.FC = () => {
 
   const t = translations[language];
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-  const [modelOptions, setModelOptions] = useState<OptionGroup[]>([]);
+  const customProviders = useConfigStore((s) => s.customProviders);
 
   // Dynamic Aspect Ratio Options based on language
   const aspectRatioOptions = useMemo(
@@ -59,36 +59,44 @@ export const ControlPanel: React.FC = () => {
   // Build grouped model options dynamically.
   // serviceMode is permanently "server": creation models come only from the
   // (admin-assigned) custom providers.
-  useEffect(() => {
-    const updateModelOptions = () => {
-      const groups: OptionGroup[] = [];
+  const modelOptions = useMemo(() => {
+    const groups: OptionGroup[] = [];
 
-      const customProviders = getCustomProviders();
-      customProviders.forEach((cp) => {
-        const models = cp.models.generate;
-        if (models && models.length > 0) {
+    customProviders.forEach((cp) => {
+      const models = cp.models.generate;
+      if (!models || models.length === 0) return;
+
+      if (cp.id === "server") {
+        const byProvider = new Map<string, typeof models>();
+        models.forEach((m) => {
+          const label = m.providerName || cp.name;
+          byProvider.set(label, [...(byProvider.get(label) ?? []), m]);
+        });
+        byProvider.forEach((providerModels, label) => {
           groups.push({
-            label: cp.name,
-            options: models.map((m) => ({
+            label,
+            options: providerModels.map((m) => ({
               label: m.name,
               value: `${cp.id}:${m.id}`,
             })),
           });
-        }
-      });
+        });
+      } else {
+        groups.push({
+          label: cp.name,
+          options: models.map((m) => ({
+            label: m.name,
+            value: `${cp.id}:${m.id}`,
+          })),
+        });
+      }
+    });
 
-      setModelOptions(groups);
-    };
-
-    updateModelOptions();
-    // Listen for storage changes to update list dynamically (e.g. after provider sync)
-    window.addEventListener("storage", updateModelOptions);
-    return () => window.removeEventListener("storage", updateModelOptions);
-  }, [t]);
+    return groups;
+  }, [customProviders]);
 
   // Determine current model configuration (Standard or Custom)
   const activeConfig = useMemo(() => {
-    const customProviders = getCustomProviders();
     // Try to find custom provider matching the ID
     const activeCustomProvider = customProviders.find((p) => p.id === provider);
 
@@ -126,7 +134,7 @@ export const ControlPanel: React.FC = () => {
       steps: getModelConfig(provider, model),
       guidance: getGuidanceScaleConfig(model, provider),
     };
-  }, [provider, model]);
+  }, [customProviders, provider, model]);
 
 
 

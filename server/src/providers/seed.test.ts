@@ -35,4 +35,23 @@ describe("seedGlobalProviders", () => {
     const poll = (await listGlobal(ctx)).find((g) => g.name === "Pollinations")!;
     expect(poll.models[0].endpointPath).toBe("/openai");
   });
+
+  it("Right Code seeds draw models for image generation and generation-based edits", async () => {
+    const ctx = buildTestContext();
+    await seedGlobalProviders(ctx);
+    const rightCode = (await listGlobal(ctx)).find((g) => g.name === "Right Code")!;
+    expect(rightCode.format).toBe("openai");
+    expect(rightCode.apiUrl).toBe("https://www.right.codes/draw");
+    expect(rightCode.models.map((m) => m.modelId)).toEqual([
+      "gpt-image-2",
+      "gpt-image-2-vip",
+      "nano-banana",
+      "nano-banana-2",
+      "nano-banana-pro",
+    ]);
+    for (const model of rightCode.models) {
+      expect(model.capabilities).toEqual(["image", "edit"]);
+      expect(model.editEndpoint).toBe("generations");
+    }
+  });
 });

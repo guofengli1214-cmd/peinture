@@ -27,6 +27,87 @@ async function parseImageResponse(res: Response): Promise<{ url: string }> {
   throw new Error("error_invalid_response");
 }
 
+function extractImageUrl(text: string): string | null {
+  try {
+    const data = JSON.parse(text) as { url?: string; data?: { url?: string }[] };
+    if (data.url) return data.url;
+    if (data.data?.[0]?.url) return data.data[0].url;
+  } catch {
+    /* not JSON */
+  }
+  const dataUrl = text.match(/data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+/i)?.[0];
+  if (dataUrl) return dataUrl;
+  const imageUrl = text.match(/https?:\/\/[^\s"'<>)]*?\.(?:png|jpe?g|webp|gif|avif)(?:\?[^\s"'<>)]*)?/i)?.[0];
+  return imageUrl ?? null;
+}
+
+async function parseChatImageResponse(res: Response): Promise<{ url: string }> {
+  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  const content = data?.choices?.[0]?.message?.content ?? "";
+  const url = extractImageUrl(content);
+  if (url) return { url };
+  throw new Error("error_invalid_response");
+}
+
+async function parseChatImageStream(res: Response): Promise<{ url: string }> {
+  const reader = res.body?.getReader();
+  if (!reader) return parseChatImageResponse(res);
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+  while (true) {
+    let read;
+    try {
+      read = await reader.read();
+    } catch (err) {
+      const url = extractImageUrl(content);
+      if (url) return { url };
+      throw err;
+    }
+    const { value, done } = read;
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? "";
+
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      try {
+        const chunk = JSON.parse(payload) as {
+          choices?: { delta?: { content?: string }; message?: { content?: string } }[];
+        };
+        content += chunk.choices?.map((c) => c.delta?.content ?? c.message?.content ?? "").join("") ?? "";
+      } catch {
+        /* ignore malformed SSE comments/chunks */
+      }
+    }
+
+    const url = extractImageUrl(content);
+    if (url) {
+      await reader.cancel().catch(() => undefined);
+      return { url };
+    }
+
+    if (done) break;
+  }
+
+  const url = extractImageUrl(content);
+  if (url) return { url };
+  throw new Error("error_invalid_response");
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  return Buffer.from(await blob.arrayBuffer()).toString("base64");
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  const b64 = await blobToBase64(blob);
+  return `data:${blob.type || "image/png"};base64,${b64}`;
+}
+
 export const openaiAdapter: FormatAdapter = {
   async generate(c: AdapterContext, params: ImageParams) {
     const { width, height } = getDimensions(params.aspectRatio, params.enableHD ?? false);
@@ -40,6 +121,52 @@ export const openaiAdapter: FormatAdapter = {
   },
 
   async edit(c: AdapterContext, images: Blob[], prompt: string, opts: EditOpts) {
+    if (c.model.editEndpoint === "chatCompletions") {
+      const imageUrls = await Promise.all(images.map(blobToDataUrl));
+      const res = await fetchWithRetry(v1(c.apiUrl, "/chat/completions"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders(c.secret) },
+        body: JSON.stringify({
+          model: c.model.modelId,
+          stream: true,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                ...imageUrls.map((url) => ({ type: "image_url", image_url: { url } })),
+              ],
+            },
+          ],
+        }),
+      });
+      if (!res.ok) throw new Error(await errText(res));
+      return parseChatImageStream(res);
+    }
+
+    if (c.model.editEndpoint === "generations") {
+      const body: {
+        model: string;
+        prompt: string;
+        image: string[];
+        size?: string;
+        response_format: "url";
+      } = {
+        model: c.model.modelId,
+        prompt,
+        image: await Promise.all(images.map(blobToBase64)),
+        response_format: "url",
+      };
+      if (opts.width && opts.height) body.size = `${opts.width}x${opts.height}`;
+      const res = await fetchWithRetry(v1(c.apiUrl, "/images/generations"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders(c.secret) },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(await errText(res));
+      return parseImageResponse(res);
+    }
+
     const form = new FormData();
     form.append("model", c.model.modelId);
     form.append("prompt", prompt);

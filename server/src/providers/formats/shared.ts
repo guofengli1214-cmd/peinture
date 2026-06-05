@@ -3,6 +3,9 @@ import { getDimensions } from "../dimensions";
 /** Capabilities a model can expose. */
 export type Capability = "image" | "edit" | "text" | "video" | "upscale";
 
+/** OpenAI-format edit routing. Default "edits" uses /v1/images/edits multipart. */
+export type OpenAIEditEndpoint = "edits" | "generations" | "chatCompletions";
+
 /** Per-model Gradio Space config (only present on gradio-format models). */
 export interface GradioModelConfig {
   baseUrl: string;
@@ -27,8 +30,10 @@ export interface ModelDef {
   capabilities: Capability[];
   /** Per-model enable switch. Absent/true = enabled; false = hidden from users and refused by dispatch. */
   enabled?: boolean;
-  /** openai-format only: override the endpoint sub-path (relative to apiUrl), e.g. "/openai" for Pollinations. Default uses /v1/chat/completions or /v1/images/generations. */
+  /** openai-format text only: override the endpoint sub-path (relative to apiUrl), e.g. "/openai" for Pollinations. */
   endpointPath?: string;
+  /** openai-format edit only: route edits through /v1/images/generations with JSON image[] references. */
+  editEndpoint?: OpenAIEditEndpoint;
   gradio?: GradioModelConfig;
 }
 

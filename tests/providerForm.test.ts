@@ -52,8 +52,9 @@ describe("buildCleanModels", () => {
     const openaiModel: ApiProviderModelDef = {
       modelId: " gpt-image ",
       name: "  ",
-      capabilities: ["image"],
+      capabilities: ["image", "edit"],
       endpointPath: "/v1/images",
+      editEndpoint: "generations",
     };
     const result = buildCleanModels([openaiModel], ["{not json"], "openai");
     if ("error" in result) throw new Error("unexpected error");
@@ -61,6 +62,7 @@ describe("buildCleanModels", () => {
     expect(result.models[0].modelId).toBe("gpt-image");
     expect(result.models[0].name).toBe("gpt-image"); // falls back to modelId
     expect(result.models[0].endpointPath).toBe("/v1/images");
+    expect(result.models[0].editEndpoint).toBe("generations");
     expect(result.models[0].gradio).toBeUndefined();
   });
 });

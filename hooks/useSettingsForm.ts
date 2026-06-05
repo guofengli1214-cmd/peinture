@@ -342,9 +342,13 @@ export const useSettingsForm = (isOpen: boolean, onClose: () => void) => {
     saveUpscalerModelConfig(upscalerModelValue);
 
     if (creationModelValue) {
-      const [newProvider, newModel] = creationModelValue.split(":");
-      setProvider(newProvider as any);
-      setModel(newModel as any);
+      const idx = creationModelValue.indexOf(":");
+      const newProvider = idx > 0 ? creationModelValue.slice(0, idx) : "";
+      const newModel = idx > 0 ? creationModelValue.slice(idx + 1) : "";
+      if (newProvider && newModel) {
+        setProvider(newProvider as any);
+        setModel(newModel as any);
+      }
     }
 
     onClose();

@@ -4,6 +4,7 @@ import type { Response } from "express";
 /** Shared zod schemas + helpers for the custom-provider routes. */
 
 const capability = z.enum(["image", "edit", "text", "video", "upscale"]);
+const openAIEditEndpoint = z.enum(["edits", "generations", "chatCompletions"]);
 
 const gradioConfig = z.object({
   baseUrl: z.string().min(1).max(1024),
@@ -23,6 +24,7 @@ const modelDef = z.object({
   capabilities: z.array(capability).min(1),
   enabled: z.boolean().optional(),
   endpointPath: z.string().max(256).optional(),
+  editEndpoint: openAIEditEndpoint.optional(),
   gradio: gradioConfig.optional(),
 });
 

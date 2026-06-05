@@ -1,5 +1,5 @@
 import type { AppContext } from "../context";
-import { createGlobalProvider, type ProviderInput } from "../services/customProviders";
+import { adminUpdate, createGlobalProvider, type ProviderInput } from "../services/customProviders";
 
 /**
  * Initial global providers seeded into custom_providers on first boot (idempotent
@@ -15,6 +15,14 @@ const Z_IMAGE_NEGATIVE_PROMPT =
 // Verbatim from huggingface.ts:24-25
 const VIDEO_NEGATIVE_PROMPT =
   "Vivid colors, overexposed, static, blurry details, subtitles, style, artwork, painting, image, still, overall grayish tone, worst quality, low quality, JPEG compression artifacts, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, malformed limbs, fused fingers, still image, cluttered background, three legs, many people in the background, walking backward, Screen shaking";
+
+const RIGHT_CODE_DRAW_MODELS: ProviderInput["models"] = [
+  { modelId: "gpt-image-2", name: "GPT Image 2", capabilities: ["image", "edit"], editEndpoint: "generations" },
+  { modelId: "gpt-image-2-vip", name: "GPT Image 2 VIP", capabilities: ["image", "edit"], editEndpoint: "generations" },
+  { modelId: "nano-banana", name: "Nano Banana", capabilities: ["image", "edit"], editEndpoint: "generations" },
+  { modelId: "nano-banana-2", name: "Nano Banana 2", capabilities: ["image", "edit"], editEndpoint: "generations" },
+  { modelId: "nano-banana-pro", name: "Nano Banana Pro", capabilities: ["image", "edit"], editEndpoint: "generations" },
+];
 
 export const SEED_PROVIDERS: ProviderInput[] = [
   {
@@ -59,6 +67,10 @@ export const SEED_PROVIDERS: ProviderInput[] = [
   {
     name: "Pollinations", format: "openai", apiUrl: "https://text.pollinations.ai", secret: null,
     models: [{ modelId: "openai-fast", name: "OpenAI 4o mini", capabilities: ["text"], endpointPath: "/openai" }],
+  },
+  {
+    name: "Right Code", format: "openai", apiUrl: "https://www.right.codes/draw", secret: null,
+    models: RIGHT_CODE_DRAW_MODELS,
   },
   {
     // NOTE: modelId "gpt-5.4" carried over from the legacy default (userConfig.ts);
@@ -118,7 +130,13 @@ export const SEED_PROVIDERS: ProviderInput[] = [
 export async function seedGlobalProviders(ctx: AppContext): Promise<number> {
   let created = 0;
   for (const seed of SEED_PROVIDERS) {
-    if (await ctx.repos.customProviders.findGlobalByName(seed.name)) continue;
+    const existing = await ctx.repos.customProviders.findGlobalByName(seed.name);
+    if (existing) {
+      if (seed.name === "Right Code") {
+        await adminUpdate(ctx, existing.id, { models: seed.models });
+      }
+      continue;
+    }
     await createGlobalProvider(ctx, seed);
     created++;
   }

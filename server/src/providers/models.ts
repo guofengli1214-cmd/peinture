@@ -13,6 +13,7 @@ export type ModelType = "text2image" | "image2image" | "image2video" | "text2tex
 export interface ClientModel {
   id: string;
   name: string;
+  providerName?: string;
   type: ModelType[];
   steps?: { range: [number, number]; default: number };
   guidance?: { range: [number, number]; default: number };
@@ -43,12 +44,14 @@ const CAP_TO_TYPE: Record<ModelCapability, ModelType> = {
 export function customModelsToClient(
   providerId: string,
   models: { modelId: string; name: string; capabilities: ModelCapability[]; enabled?: boolean }[],
+  providerName?: string,
 ): ClientModel[] {
   return models
     .filter((m) => m.enabled !== false)
     .map((m) => ({
       id: `${providerId}:${m.modelId}`,
       name: m.name,
+      providerName,
       type: (m.capabilities ?? []).map((c) => CAP_TO_TYPE[c]).filter(Boolean) as ModelType[],
     }))
     .filter((m) => m.type.length > 0);

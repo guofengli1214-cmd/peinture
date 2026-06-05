@@ -1,5 +1,6 @@
 // Import React to resolve namespace errors
 import React, { useState, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import { useEditorStore } from "../store/editorStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { useUIStore } from "../store/uiStore";
@@ -11,6 +12,7 @@ import {
   getCustomProviders,
 } from "../services/utils";
 import { translations } from "../translations";
+import { resolveErrorMessage } from "../services/errorUtils";
 import {
   editImageCustom,
   optimizePromptCustom,
@@ -197,6 +199,7 @@ export const useEditorGeneration = (
     } catch (e: any) {
       if (e.name !== "AbortError") {
         console.error("Generation failed", e);
+        toast.error(resolveErrorMessage(e, t, "generationFailed"));
       }
     } finally {
       setIsGenerating(false);
