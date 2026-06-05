@@ -3,14 +3,8 @@ import multer from "multer";
 import { z } from "zod";
 import type { AppContext } from "../context";
 import { createAuthMiddleware } from "../auth/middleware";
-import { getProviderTokens, getPublicConfig, PROVIDER_IDS, type ProviderId } from "../services/userConfig";
-import {
-  REGISTRY,
-  TOKEN_OPTIONAL_PROVIDERS,
-  availableModels,
-  toClientModels,
-  customModelsToClient,
-} from "../providers/models";
+import { getPublicConfig, PROVIDER_IDS } from "../services/userConfig";
+import { customModelsToClient } from "../providers/models";
 import { dispatchGenerate, dispatchEdit, dispatchText, dispatchUpscale, dispatchVideo } from "../providers/index";
 import { effectiveForUser, parseModelsJson } from "../services/customProviders";
 
@@ -53,25 +47,16 @@ export function createV1Router(ctx: AppContext): Router {
   const { requireAuth } = createAuthMiddleware(ctx);
   router.use(requireAuth);
 
-  // GET /models — the models this user can use (HF always; others if tokened).
+  // GET /models — the models this user can use (from DB-driven custom/global providers).
   router.get("/models", async (req, res) => {
     try {
       const userId = req.user!.id;
-      const presence: Partial<Record<ProviderId, boolean>> = {};
-      const providers = [...new Set(REGISTRY.map((m) => m.provider))];
-      for (const p of providers) {
-        if (TOKEN_OPTIONAL_PROVIDERS.includes(p)) continue;
-        presence[p] = (await getProviderTokens(ctx, userId, p)).length > 0;
-      }
-      const models = availableModels((p) => !!presence[p]);
-
-      // Append the user's custom / relay provider models (global + own, enabled).
+      // The user's custom / relay provider models (global + own, enabled).
       const customRecs = await effectiveForUser(ctx, userId);
-      const customModels = customRecs.flatMap((r) =>
+      const models = customRecs.flatMap((r) =>
         customModelsToClient(r.id, parseModelsJson(r.modelsJson)),
       );
-
-      res.json([...toClientModels(models), ...customModels]);
+      res.json(models);
     } catch (e) {
       sendError(res, 500, (e as Error).message || "error_models_failed");
     }

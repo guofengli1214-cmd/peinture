@@ -1,15 +1,8 @@
 import { describe, it, expect } from "vitest";
-import {
-  parseModelId,
-  findModel,
-  availableModels,
-  toClientModels,
-  qualifiedId,
-  customModelsToClient,
-} from "./models";
+import { parseModelId, customModelsToClient } from "./models";
 import { runWithTokenRetry, isQuotaError } from "./tokenRetry";
 
-describe("model registry", () => {
+describe("model id helpers", () => {
   it("parses provider-qualified ids", () => {
     expect(parseModelId("huggingface:z-image-turbo")).toEqual({
       provider: "huggingface",
@@ -22,31 +15,6 @@ describe("model registry", () => {
       provider: "huggingface",
       modelId: "z-image-turbo",
     });
-  });
-
-  it("finds a registry model by qualified id", () => {
-    const m = findModel("huggingface:z-image");
-    expect(m?.name).toBe("Z-Image");
-    expect(m?.guidance?.default).toBe(4);
-  });
-
-  it("exposes HuggingFace models even with no tokens", () => {
-    const models = availableModels(() => false);
-    expect(models.length).toBeGreaterThan(0);
-    expect(models.every((m) => m.provider === "huggingface")).toBe(true);
-  });
-
-  it("toClientModels emits provider-qualified ids and types", () => {
-    const client = toClientModels([
-      { provider: "huggingface", modelId: "z-image-turbo", name: "Z", type: ["text2image"] },
-    ]);
-    expect(client[0].id).toBe("huggingface:z-image-turbo");
-    expect(client[0].type).toEqual(["text2image"]);
-  });
-
-  it("qualifiedId round-trips with parseModelId", () => {
-    const m = { provider: "huggingface" as const, modelId: "qwen-image", name: "Q", type: ["text2image" as const] };
-    expect(parseModelId(qualifiedId(m))).toEqual({ provider: "huggingface", modelId: "qwen-image" });
   });
 });
 

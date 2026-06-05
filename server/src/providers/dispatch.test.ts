@@ -66,12 +66,12 @@ describe("generation dispatch — custom providers", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("https://api.anthropic.com/v1/messages");
   });
 
-  it("builtin non-HF providers are not yet supported", async () => {
+  it("rejects an unknown (non-DB) provider id", async () => {
     const ctx = buildTestContext();
     const alice = (await seedUser(ctx, { username: "alice", password: "pw" })).id;
     await expect(
       dispatchGenerate(ctx, alice, "gitee:z-image-turbo", { prompt: "x", aspectRatio: "1:1" }),
-    ).rejects.toThrow("provider_not_supported");
+    ).rejects.toThrow("PROVIDER_NOT_AVAILABLE");
   });
 
   it("routes a global gradio provider's model through the gradio adapter", async () => {

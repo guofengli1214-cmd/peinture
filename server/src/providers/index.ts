@@ -1,40 +1,26 @@
 import type { AppContext } from "../context";
-import type { ProviderId } from "../services/userConfig";
-import { getProviderTokens } from "../services/userConfig";
 import { resolveForUse } from "../services/customProviders";
 import { parseModelId } from "./models";
 import { ADAPTERS } from "./formats/index";
 import type { AdapterContext, EditOpts, FormatAdapter, ImageParams, VideoOpts } from "./formats/shared";
-import {
-  generateHF,
-  editHF,
-  optimizeHF,
-  upscaleHF,
-  videoHF,
-  type GenerateResult,
-} from "./huggingface";
+
+export interface GenerateResult {
+  id: string;
+  url: string;
+  seed?: number;
+  steps?: number;
+  guidance?: number;
+}
 
 /**
  * Provider dispatch for the generation proxy.
  *
- *  - "huggingface"          -> the ported HF engine (kept until phase 5 cleanup)
- *  - other builtin names    -> not supported (removed once seeded) -> provider_not_supported
- *  - anything else (a UUID) -> a custom/global provider, routed by its stored
- *                              format (openai / claude / gemini / gradio) via ADAPTERS,
- *                              selecting the adapter method by the model's capability.
+ * Every model id is provider-qualified (`<providerId>:<modelId>`). The provider
+ * id resolves to a custom/global provider record (DB-driven); its stored format
+ * (openai / claude / gemini / gradio) selects the adapter from ADAPTERS, and the
+ * model's capability selects the adapter method. Unknown provider ids throw
+ * PROVIDER_NOT_AVAILABLE in resolveForUse.
  */
-
-const BUILTINS: ProviderId[] = ["huggingface", "gitee", "modelscope", "a4f", "openai", "google"];
-const HF: ProviderId = "huggingface";
-
-function isBuiltin(provider: string): boolean {
-  return (BUILTINS as string[]).includes(provider);
-}
-
-async function tokensFor(ctx: AppContext, userId: number, provider: string): Promise<string[]> {
-  if (!isBuiltin(provider)) return [];
-  return getProviderTokens(ctx, userId, provider as ProviderId);
-}
 
 /** Resolve a custom provider + the selected model + verify the capability exists. */
 async function resolveCustom(
@@ -59,10 +45,6 @@ export async function dispatchGenerate(
   qualifiedModel: string,
   params: ImageParams,
 ): Promise<GenerateResult> {
-  const { provider, modelId } = parseModelId(qualifiedModel);
-  if (provider === HF) return generateHF(modelId, params, await tokensFor(ctx, userId, provider));
-  if (isBuiltin(provider)) throw new Error("provider_not_supported");
-
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "generate");
   const r = await adapter.generate!(c, params);
   return {
@@ -82,10 +64,6 @@ export async function dispatchEdit(
   prompt: string,
   opts: EditOpts,
 ): Promise<{ id: string; url: string; seed?: number }> {
-  const { provider } = parseModelId(qualifiedModel);
-  if (provider === HF) return editHF(images, prompt, opts, await tokensFor(ctx, userId, provider));
-  if (isBuiltin(provider)) throw new Error("provider_not_supported");
-
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "edit");
   const { url } = await adapter.edit!(c, images, prompt, opts);
   return { id: crypto.randomUUID(), url };
@@ -98,30 +76,22 @@ export async function dispatchText(
   prompt: string,
   systemPrompt: string,
 ): Promise<string> {
-  const { provider, modelId } = parseModelId(qualifiedModel);
-  if (provider === HF) return optimizeHF(prompt, systemPrompt, modelId);
-  if (isBuiltin(provider)) throw new Error("provider_not_supported");
-
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "text");
   return adapter.text!(c, prompt, systemPrompt);
 }
 
-/** HD upscale — HuggingFace (RealESRGAN) or a custom provider whose format supports upscale. */
+/** HD upscale — a custom provider whose format supports upscale. */
 export async function dispatchUpscale(
   ctx: AppContext,
   userId: number,
   qualifiedModel: string,
   image: Blob,
 ): Promise<{ url: string }> {
-  const { provider } = parseModelId(qualifiedModel);
-  if (provider === HF) return upscaleHF(image, await tokensFor(ctx, userId, provider));
-  if (isBuiltin(provider)) throw new Error("provider_not_supported");
-
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "upscale");
   return adapter.upscale!(c, image);
 }
 
-/** Image→video (Live). HuggingFace (Wan 2.2, sync via Gradio) or a custom provider. */
+/** Image→video (Live) via a custom provider whose format supports video. */
 export async function dispatchVideo(
   ctx: AppContext,
   userId: number,
@@ -129,10 +99,6 @@ export async function dispatchVideo(
   image: Blob,
   opts: VideoOpts,
 ): Promise<{ url: string }> {
-  const { provider } = parseModelId(qualifiedModel);
-  if (provider === HF) return videoHF(image, opts, await tokensFor(ctx, userId, provider));
-  if (isBuiltin(provider)) throw new Error("provider_not_supported");
-
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "video");
   return adapter.video!(c, image, opts);
 }
