@@ -35,6 +35,11 @@ export const DEFAULT_VIDEO_SETTINGS_BASE: VideoSettings = {
   guidance: 1,
 };
 
+export const DEFAULT_TEXT_MODEL_CONFIG = {
+  provider: "server",
+  model: "deepseek:deepseek-v4-flash",
+};
+
 export interface ConfigState {
   serviceMode: ServiceMode;
   storageType: StorageType;
@@ -110,7 +115,7 @@ export const useConfigStore = create<ConfigState>()((set) => ({
 
       editModelConfig: { provider: "huggingface", model: "qwen-image-edit" },
       liveModelConfig: { provider: "huggingface", model: "wan2_2-i2v" },
-      textModelConfig: { provider: "huggingface", model: "openai-fast" },
+      textModelConfig: DEFAULT_TEXT_MODEL_CONFIG,
       upscalerModelConfig: {
         provider: "huggingface",
         model: "RealESRGAN_x4plus",

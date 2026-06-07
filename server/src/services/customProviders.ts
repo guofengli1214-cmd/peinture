@@ -25,6 +25,7 @@ export type { Capability };
 export type ProviderModelDef = ModelDef;
 
 export interface ProviderInput {
+  id?: string;
   name: string;
   apiUrl: string;
   format: ProviderFormat;
@@ -114,7 +115,7 @@ async function create(
   editable: boolean,
 ): Promise<PublicProvider> {
   const rec = await ctx.repos.customProviders.create({
-    id: crypto.randomUUID(),
+    id: input.id ?? crypto.randomUUID(),
     scope,
     ownerUserId,
     managedBy,

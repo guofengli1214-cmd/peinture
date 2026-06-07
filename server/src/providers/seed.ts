@@ -24,6 +24,8 @@ const RIGHT_CODE_DRAW_MODELS: ProviderInput["models"] = [
   { modelId: "nano-banana-pro", name: "Nano Banana Pro", capabilities: ["image", "edit"], editEndpoint: "generations" },
 ];
 
+export const DEEPSEEK_PROVIDER_ID = "deepseek";
+
 export const SEED_PROVIDERS: ProviderInput[] = [
   {
     name: "HuggingFace",
@@ -67,6 +69,24 @@ export const SEED_PROVIDERS: ProviderInput[] = [
   {
     name: "Pollinations", format: "openai", apiUrl: "https://text.pollinations.ai", secret: null,
     models: [{ modelId: "openai-fast", name: "OpenAI 4o mini", capabilities: ["text"], endpointPath: "/openai" }],
+  },
+  {
+    id: DEEPSEEK_PROVIDER_ID,
+    name: "DeepSeek", format: "openai", apiUrl: "https://api.deepseek.com", secret: null,
+    models: [
+      {
+        modelId: "deepseek-v4-flash",
+        name: "DeepSeek V4 Flash",
+        capabilities: ["text"],
+        endpointPath: "/chat/completions",
+      },
+      {
+        modelId: "deepseek-v4-pro",
+        name: "DeepSeek V4 Pro",
+        capabilities: ["text"],
+        endpointPath: "/chat/completions",
+      },
+    ],
   },
   {
     name: "Right Code", format: "openai", apiUrl: "https://www.right.codes/draw", secret: null,
@@ -132,8 +152,14 @@ export async function seedGlobalProviders(ctx: AppContext): Promise<number> {
   for (const seed of SEED_PROVIDERS) {
     const existing = await ctx.repos.customProviders.findGlobalByName(seed.name);
     if (existing) {
-      if (seed.name === "Right Code") {
-        await adminUpdate(ctx, existing.id, { models: seed.models });
+      if (seed.name === "Right Code" || seed.name === "DeepSeek") {
+        await adminUpdate(ctx, existing.id, {
+          name: seed.name,
+          apiUrl: seed.apiUrl,
+          format: seed.format,
+          models: seed.models,
+          enabled: seed.enabled,
+        });
       }
       continue;
     }

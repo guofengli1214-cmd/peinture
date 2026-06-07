@@ -31,6 +31,10 @@ describe("userConfig", () => {
     const cfg = await getPublicConfig(ctx, userId);
     expect(cfg.language).toBe("en");
     expect(cfg.serviceMode).toBe("server");
+    expect(cfg.textModelConfig).toEqual({
+      provider: "server",
+      model: "deepseek:deepseek-v4-flash",
+    });
     expect(cfg.hasTokens.huggingface).toBe(false);
     expect((cfg as unknown as Record<string, unknown>).tokens).toBeUndefined();
   });

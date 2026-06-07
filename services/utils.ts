@@ -179,6 +179,39 @@ export const getCustomProviders = (): CustomProvider[] => {
   return useConfigStore.getState().customProviders;
 };
 
+export const getTextOptimizationTarget = (): { provider: CustomProvider; model: string } | null => {
+  const providers = getCustomProviders().filter((p) => p.enabled !== false);
+  const configured = getTextModelConfig();
+  const configuredProvider = providers.find((p) => p.id === configured.provider);
+  if (configuredProvider?.models.text?.some((m) => m.id === configured.model)) {
+    return { provider: configuredProvider, model: configured.model };
+  }
+
+  const serverProvider = providers.find((p) => p.id === "server");
+  const serverTextModels = serverProvider?.models.text ?? [];
+  const preferred =
+    serverTextModels.find((m) => m.id === "deepseek:deepseek-v4-flash") ??
+    serverTextModels.find((m) => m.id === "deepseek:deepseek-v4-pro") ??
+    serverTextModels[0];
+
+  if (serverProvider && preferred) {
+    const resolved = { provider: serverProvider.id, model: preferred.id };
+    useConfigStore.getState().setTextModelConfig(resolved);
+    return { provider: serverProvider, model: preferred.id };
+  }
+
+  for (const provider of providers) {
+    const firstTextModel = provider.models.text?.[0];
+    if (firstTextModel) {
+      const resolved = { provider: provider.id, model: firstTextModel.id };
+      useConfigStore.getState().setTextModelConfig(resolved);
+      return { provider, model: firstTextModel.id };
+    }
+  }
+
+  return null;
+};
+
 export const saveCustomProviders = (providers: CustomProvider[]) => {
   useConfigStore.getState().setCustomProviders(providers);
 };

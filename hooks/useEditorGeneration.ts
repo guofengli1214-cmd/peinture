@@ -10,6 +10,7 @@ import {
   getTextModelConfig,
   getEditModelConfig,
   getCustomProviders,
+  getTextOptimizationTarget,
 } from "../services/utils";
 import { translations } from "../translations";
 import { resolveErrorMessage } from "../services/errorUtils";
@@ -90,20 +91,17 @@ export const useEditorGeneration = (
 
       const base64 = tempCanvas.toDataURL("image/jpeg", 0.8);
 
-      const textConfig = getTextModelConfig();
       let optimized = "";
 
-      const customProviders = getCustomProviders();
-      const activeCustom = customProviders.find(
-        (p) => p.id === textConfig.provider,
-      );
-      if (activeCustom) {
+      const target = getTextOptimizationTarget();
+      if (target) {
         optimized = await optimizePromptCustom(
-          activeCustom,
-          textConfig.model,
+          target.provider,
+          target.model,
           prompt,
         );
       } else {
+        const textConfig = getTextModelConfig();
         optimized = await optimizeEditPrompt(base64, prompt, textConfig.model);
       }
 

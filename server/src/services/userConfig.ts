@@ -122,6 +122,7 @@ Your output must strictly adhere to the following requirements: it must contain 
 
 const EMPTY_S3: S3Config = { accessKeyId: "", secretAccessKey: "" };
 const EMPTY_WEBDAV: WebDAVConfig = { url: "", username: "", password: "", directory: "" };
+const DEFAULT_TEXT_MODEL_CONFIG: ModelRef = { provider: "server", model: "deepseek:deepseek-v4-flash" };
 
 export function defaultConfig(): UserConfig {
   return {
@@ -143,7 +144,7 @@ export function defaultConfig(): UserConfig {
     translationPrompt: DEFAULT_TRANSLATION_PROMPT,
     editModelConfig: { provider: "huggingface", model: "qwen-image-edit" },
     liveModelConfig: { provider: "huggingface", model: "wan2_2-i2v" },
-    textModelConfig: { provider: "huggingface", model: "openai-fast" },
+    textModelConfig: DEFAULT_TEXT_MODEL_CONFIG,
     upscalerModelConfig: { provider: "huggingface", model: "RealESRGAN_x4plus" },
     openaiConfig: { apiUrl: "https://api.openai.com/v1/responses", modelId: "gpt-5.4" },
     googleConfig: {

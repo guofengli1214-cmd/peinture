@@ -16,8 +16,8 @@ import {
 import {
   translatePrompt,
   getLiveModelConfig,
-  getTextModelConfig,
   getCustomProviders,
+  getTextOptimizationTarget,
   getVideoSettings,
   fetchBlob,
   getExtensionFromUrl,
@@ -175,21 +175,13 @@ export const useCreationGeneration = () => {
     addToPromptHistory(prompt);
     setIsOptimizing(true);
     try {
-      const config = getTextModelConfig();
-      let optimized = "";
-      const customProviders = getCustomProviders();
-      const activeProvider = customProviders.find(
-        (p) => p.id === config.provider,
+      const target = getTextOptimizationTarget();
+      if (!target) throw new Error("Invalid provider");
+      const optimized = await optimizePromptCustom(
+        target.provider,
+        target.model,
+        prompt,
       );
-      if (activeProvider) {
-        optimized = await optimizePromptCustom(
-          activeProvider,
-          config.model,
-          prompt,
-        );
-      } else {
-        throw new Error("Invalid provider");
-      }
       setPrompt(optimized);
     } catch (err: any) {
       console.error("Optimization failed", err);

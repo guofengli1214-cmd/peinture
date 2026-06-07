@@ -36,6 +36,29 @@ describe("seedGlobalProviders", () => {
     expect(poll.models[0].endpointPath).toBe("/openai");
   });
 
+  it("DeepSeek seeds V4 text models with a stable provider id", async () => {
+    const ctx = buildTestContext();
+    await seedGlobalProviders(ctx);
+    const deepseek = (await listGlobal(ctx)).find((g) => g.name === "DeepSeek")!;
+    expect(deepseek.id).toBe("deepseek");
+    expect(deepseek.format).toBe("openai");
+    expect(deepseek.apiUrl).toBe("https://api.deepseek.com");
+    expect(deepseek.models).toEqual([
+      {
+        modelId: "deepseek-v4-flash",
+        name: "DeepSeek V4 Flash",
+        capabilities: ["text"],
+        endpointPath: "/chat/completions",
+      },
+      {
+        modelId: "deepseek-v4-pro",
+        name: "DeepSeek V4 Pro",
+        capabilities: ["text"],
+        endpointPath: "/chat/completions",
+      },
+    ]);
+  });
+
   it("Right Code seeds draw models for image generation and generation-based edits", async () => {
     const ctx = buildTestContext();
     await seedGlobalProviders(ctx);

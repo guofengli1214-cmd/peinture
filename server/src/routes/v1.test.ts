@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { createApp } from "../app";
 import { buildTestContext, seedUser } from "../testing/helpers";
+import { seedGlobalProviders } from "../providers/seed";
 
 async function setup() {
   const ctx = buildTestContext();
@@ -26,6 +27,31 @@ describe("v1 generation proxy", () => {
     expect(Array.isArray(res.body)).toBe(true);
     // No custom/global providers seeded for this user -> empty list.
     expect(res.body).toEqual([]);
+  });
+
+  it("returns seeded DeepSeek text models for prompt optimization", async () => {
+    const { ctx, agent } = await setup();
+    await seedGlobalProviders(ctx);
+
+    const res = await agent.get("/api/v1/models");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "deepseek:deepseek-v4-flash",
+          name: "DeepSeek V4 Flash",
+          providerName: "DeepSeek",
+          type: ["text2text"],
+        }),
+        expect.objectContaining({
+          id: "deepseek:deepseek-v4-pro",
+          name: "DeepSeek V4 Pro",
+          providerName: "DeepSeek",
+          type: ["text2text"],
+        }),
+      ]),
+    );
   });
 
   it("validates the generate request body", async () => {
