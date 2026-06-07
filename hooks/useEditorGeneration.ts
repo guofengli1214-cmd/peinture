@@ -18,7 +18,6 @@ import {
   optimizePromptCustom,
 } from "../services/customService";
 import { optimizeEditPrompt } from "../services/utils";
-import { saveTempFileToOPFS } from "../services/storageService";
 
 export const useEditorGeneration = (
   image: HTMLImageElement | null,
@@ -132,21 +131,14 @@ export const useEditorGeneration = (
       let promptSuffix = `\n${t.prompt_original_image}`;
       let currentImageIndexInAPI = 1;
 
-      const originalBlob = await fetchBlob(image.src);
-      imageBlobs.push(originalBlob);
-
-      if (hasDrawings) {
-        const mergedCanvas = getMergedLayer();
-        if (mergedCanvas) {
-          const mergedBlob = await canvasToBlob(mergedCanvas);
-          imageBlobs.push(mergedBlob);
-          currentImageIndexInAPI++;
-          const editLayerDesc = t.prompt_edit_layer.replace(
-            "{n}",
-            currentImageIndexInAPI.toString(),
-          );
-          promptSuffix += `\n${editLayerDesc}`;
-        }
+      const mergedCanvas = hasDrawings ? getMergedLayer() : null;
+      if (mergedCanvas) {
+        const mergedBlob = await canvasToBlob(mergedCanvas);
+        imageBlobs.push(mergedBlob);
+        promptSuffix = `\n${t.prompt_merged_edit_image}`;
+      } else {
+        const originalBlob = await fetchBlob(image.src);
+        imageBlobs.push(originalBlob);
       }
 
       for (let i = 0; i < attachedImages.length; i++) {
@@ -184,12 +176,11 @@ export const useEditorGeneration = (
         throw new Error("Invalid provider");
       }
 
-      // Cache result to OPFS and use local Object URL
+      // Cache result bytes as a local Object URL. ImageEditorView persists the
+      // result in the editor draft so it can survive refreshes.
       let finalUrl = result.url;
       try {
         const blob = await fetchBlob(result.url);
-        const fileName = `edit-${Date.now()}.png`;
-        await saveTempFileToOPFS(blob, fileName);
         finalUrl = URL.createObjectURL(blob);
       } catch (e) {
         console.warn("Failed to cache edited image", e);

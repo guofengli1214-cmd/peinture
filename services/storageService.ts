@@ -4,6 +4,18 @@ import { useConfigStore } from "../store/configStore";
 
 const OPFS_TMP_DIR = "/tmp";
 const OPFS_GALLERY_DIR = "/gallery";
+const OPFS_EDITOR_DRAFT_DIR = "/editor-drafts";
+
+export const isOPFSSupported = (): boolean =>
+  typeof navigator !== "undefined" &&
+  !!navigator.storage &&
+  typeof navigator.storage.getDirectory === "function";
+
+const assertOPFSSupported = () => {
+  if (!isOPFSSupported()) {
+    throw new Error("opfs_unavailable");
+  }
+};
 
 export const DEFAULT_S3_CONFIG: S3Config = {
   accessKeyId: "",
@@ -57,12 +69,36 @@ export const isStorageConfigured = (): boolean => {
   const type = getStorageType();
   if (type === "s3" || type === "webdav")
     return !!useConfigStore.getState().storageConfigured;
-  if (type === "opfs") return true;
+  if (type === "opfs") return isOPFSSupported();
   return false;
 };
 
 const isManagedStorageType = (type: StorageType) =>
   type === "s3" || type === "webdav";
+
+export const isHiddenCloudFileKey = (keyOrUrl: string): boolean => {
+  let value = keyOrUrl;
+  try {
+    const url = new URL(keyOrUrl);
+    value = decodeURIComponent(url.pathname);
+  } catch {
+    value = decodeURIComponent(keyOrUrl);
+  }
+  const normalized = value.replace(/\\/g, "/");
+  return (
+    /(?:^|\/)right-code-(?:input|chat-input)-/i.test(normalized) ||
+    /(?:^|\/)(?:__editor-drafts|editor-drafts|\.editor-drafts)\//i.test(
+      normalized,
+    ) ||
+    /(?:^|\/)(?:peinture-editor-draft|editor-draft)-/i.test(normalized)
+  );
+};
+
+const filterVisibleCloudFiles = (files: CloudFile[]): CloudFile[] =>
+  files.filter(
+    (file) =>
+      !isHiddenCloudFileKey(file.key) && !isHiddenCloudFileKey(file.url),
+  );
 
 async function parseStorageError(response: Response, fallback: string): Promise<never> {
   let code = fallback;
@@ -401,21 +437,27 @@ export const listCloudFiles = async (): Promise<CloudFile[]> => {
   const type = getStorageType();
 
   if (isManagedStorageType(type)) {
-    return listManagedCloudFiles();
+    return filterVisibleCloudFiles(await listManagedCloudFiles());
   } else if (type === "s3") {
     const config = getS3Config();
-    return listS3Files(config);
+    return filterVisibleCloudFiles(await listS3Files(config));
   } else if (type === "webdav") {
     const config = getWebDAVConfig();
-    return listWebDAVFiles(config);
+    return filterVisibleCloudFiles(await listWebDAVFiles(config));
   } else if (type === "opfs") {
-    return listOPFSGalleryFiles();
+    return filterVisibleCloudFiles(await listOPFSGalleryFiles());
   }
   return [];
 };
 
 export const fetchCloudBlob = async (url: string): Promise<Blob> => {
   const type = getStorageType();
+
+  if (url.startsWith("data:") || url.startsWith("blob:")) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch local URL: ${response.status}`);
+    return response.blob();
+  }
 
   // Explicit OPFS protocol handling
   if (url.startsWith("opfs://")) {
@@ -604,12 +646,14 @@ const performWebDAVRename = async (
 let opfsDirsInitPromise: Promise<void> | null = null;
 
 export const initOpfsDirs = (): Promise<void> => {
+  if (!isOPFSSupported()) return Promise.resolve();
   if (opfsDirsInitPromise) return opfsDirsInitPromise;
 
   opfsDirsInitPromise = (async () => {
     try {
       await dir(OPFS_TMP_DIR).create();
       await dir(OPFS_GALLERY_DIR).create();
+      await dir(OPFS_EDITOR_DRAFT_DIR).create();
     } catch (e) {
       opfsDirsInitPromise = null; // Allow retry on failure
       console.error("Failed to init OPFS dirs", e);
@@ -621,6 +665,7 @@ export const initOpfsDirs = (): Promise<void> => {
 
 // Cleanup OPFS tmp files older than 24 hours
 export const cleanupOldTempFiles = async () => {
+  if (!isOPFSSupported()) return;
   try {
     const root = await navigator.storage.getDirectory();
     let tmpHandle;
@@ -652,6 +697,7 @@ export const cleanupOldTempFiles = async () => {
 };
 
 export const clearOPFS = async () => {
+  if (!isOPFSSupported()) return;
   const root = dir("/");
   const children = await root.children();
   for (const child of children) {
@@ -664,6 +710,9 @@ export const clearOPFS = async () => {
 // -- TMP Directory Operations --
 
 export const saveTempFileToOPFS = async (blob: Blob, fileName: string) => {
+  if (!isOPFSSupported()) {
+    return URL.createObjectURL(blob);
+  }
   await initOpfsDirs(); // Ensure exists
   const buffer = await blob.arrayBuffer();
   await write(`${OPFS_TMP_DIR}/${fileName}`, buffer);
@@ -674,6 +723,7 @@ export const renameTempFileFromOPFS = async (
   oldFileName: string,
   newFileName: string,
 ) => {
+  if (!isOPFSSupported()) return false;
   try {
     const oldFile = file(`${OPFS_TMP_DIR}/${oldFileName}`);
     if (await oldFile.exists()) {
@@ -691,6 +741,7 @@ export const renameTempFileFromOPFS = async (
 export const readTempFileFromOPFS = async (
   fileName: string,
 ): Promise<Blob | null> => {
+  if (!isOPFSSupported()) return null;
   try {
     const f = file(`${OPFS_TMP_DIR}/${fileName}`);
     if (!(await f.exists())) return null;
@@ -702,6 +753,7 @@ export const readTempFileFromOPFS = async (
 };
 
 export const deleteTempFileFromOPFS = async (fileName: string) => {
+  if (!isOPFSSupported()) return;
   try {
     const f = file(`${OPFS_TMP_DIR}/${fileName}`);
     if (await f.exists()) await f.remove();
@@ -710,9 +762,55 @@ export const deleteTempFileFromOPFS = async (fileName: string) => {
   }
 };
 
+// -- Editor Draft Directory Operations --
+
+export const saveEditorDraftFileToOPFS = async (
+  blob: Blob,
+  fileName: string,
+): Promise<string | null> => {
+  if (!isOPFSSupported()) return null;
+  await initOpfsDirs();
+  const buffer = await blob.arrayBuffer();
+  await write(`${OPFS_EDITOR_DRAFT_DIR}/${fileName}`, buffer);
+  return fileName;
+};
+
+export const readEditorDraftFileFromOPFS = async (
+  fileName: string,
+): Promise<Blob | null> => {
+  if (!isOPFSSupported()) return null;
+  try {
+    const f = file(`${OPFS_EDITOR_DRAFT_DIR}/${fileName}`);
+    if (!(await f.exists())) return null;
+    return new Blob([await f.arrayBuffer()]);
+  } catch (e) {
+    console.warn(`Failed to read editor draft file ${fileName}`, e);
+    return null;
+  }
+};
+
+export const clearEditorDraftFilesFromOPFS = async (): Promise<void> => {
+  if (!isOPFSSupported()) return;
+  try {
+    await initOpfsDirs();
+    const root = await navigator.storage.getDirectory();
+    const draftHandle = await root.getDirectoryHandle("editor-drafts", {
+      create: true,
+    });
+
+    // @ts-expect-error: TS doesn't fully support FileSystemDirectoryHandle async iterable yet
+    for await (const [name] of draftHandle.entries()) {
+      await draftHandle.removeEntry(name);
+    }
+  } catch (e) {
+    console.warn("Failed to clear editor draft files", e);
+  }
+};
+
 // -- Gallery Directory Operations --
 
 const uploadToOPFSGallery = async (blob: Blob, fileName: string) => {
+  assertOPFSSupported();
   await initOpfsDirs();
   const buffer = await blob.arrayBuffer();
   await write(`${OPFS_GALLERY_DIR}/${fileName}`, buffer);
@@ -720,6 +818,7 @@ const uploadToOPFSGallery = async (blob: Blob, fileName: string) => {
 };
 
 const listOPFSGalleryFiles = async () => {
+  if (!isOPFSSupported()) return [];
   await initOpfsDirs();
   const root = await navigator.storage.getDirectory();
   // Navigate to gallery dir manually via handle
@@ -754,6 +853,7 @@ const listOPFSGalleryFiles = async () => {
 };
 
 const fetchOPFSBlob = async (url: string) => {
+  assertOPFSSupported();
   // URL format: opfs://path/to/file or just absolute path logic
   const path = url.replace("opfs://", ""); // Remove protocol
   // Ensure path starts with / if not present (write logic uses absolute paths)
@@ -765,6 +865,7 @@ const fetchOPFSBlob = async (url: string) => {
 };
 
 const deleteOPFSGalleryFile = async (key: string) => {
+  if (!isOPFSSupported()) return;
   // Key is filename
   // Handle if key is full URL or just filename
   const fileName = key.replace(`opfs://${OPFS_GALLERY_DIR}/`, "");

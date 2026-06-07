@@ -34,10 +34,45 @@ describe("v1 generation proxy", () => {
     expect(res.status).toBe(400);
   });
 
-  it("rejects an unknown / inaccessible custom provider model", async () => {
+  it("submits image generation as a task", async () => {
     const { agent } = await setup();
     const res = await agent
       .post("/api/v1/generate")
+      .send({ model: "mystery:foo", prompt: "a cat" });
+    expect(res.status).toBe(202);
+    expect(res.body.status).toBe("processing");
+    expect(typeof res.body.taskId).toBe("string");
+  });
+
+  it("submits image edits as a task and exposes failure through task-status", async () => {
+    const { agent } = await setup();
+    const res = await agent
+      .post("/api/v1/edit")
+      .field("model", "mystery:foo")
+      .field("prompt", "make it brighter")
+      .attach("image", Buffer.from("png"), {
+        filename: "source.png",
+        contentType: "image/png",
+      });
+    expect(res.status).toBe(202);
+    expect(res.body.status).toBe("processing");
+    expect(typeof res.body.taskId).toBe("string");
+
+    let statusRes = await agent.get(`/api/v1/task-status?taskId=${res.body.taskId}`);
+    for (let i = 0; i < 10 && statusRes.body.status === "processing"; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      statusRes = await agent.get(`/api/v1/task-status?taskId=${res.body.taskId}`);
+    }
+
+    expect(statusRes.status).toBe(200);
+    expect(statusRes.body.status).toBe("failed");
+    expect(statusRes.body.error).toContain("PROVIDER_NOT_AVAILABLE");
+  });
+
+  it("rejects an unknown / inaccessible custom provider model", async () => {
+    const { agent } = await setup();
+    const res = await agent
+      .post("/api/v1/generate-sync")
       .send({ model: "mystery:foo", prompt: "a cat" });
     expect(res.status).toBe(502);
     expect(res.text).toContain("PROVIDER_NOT_AVAILABLE");
@@ -46,7 +81,7 @@ describe("v1 generation proxy", () => {
   it("rejects a builtin/unknown provider id (no longer special-cased)", async () => {
     const { agent } = await setup();
     const res = await agent
-      .post("/api/v1/generate")
+      .post("/api/v1/generate-sync")
       .send({ model: "gitee:z-image-turbo", prompt: "a cat" });
     expect(res.status).toBe(502);
     expect(res.text).toContain("PROVIDER_NOT_AVAILABLE");

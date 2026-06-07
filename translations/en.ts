@@ -357,6 +357,7 @@ export const en = {
   upload_ref_image: "Upload Reference Image",
   ref_image_n: "Reference Image {n}",
   prompt_original_image: "The first image is the original image.",
+  prompt_merged_edit_image: "The first image is the complete image with the user's edit marks included. Apply the user's instruction using those marks as the edit guidance.",
   prompt_edit_layer: "The second image contains the user's editing operations; all modifications are performed on this layer.",
   prompt_ref_image: "Reference Image {n} is the {i} image.",
   menu_replace: "Replace Image",

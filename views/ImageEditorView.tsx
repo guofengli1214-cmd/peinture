@@ -25,6 +25,15 @@ import {
   getStorageType,
   fetchCloudBlob,
 } from "../services/storageService";
+import { fetchBlob } from "../services/utils";
+import {
+  clearEditorDraft,
+  patchEditorDraft,
+  readEditorDraft,
+  readEditorDraftBlob,
+  saveEditorDraftBlob,
+  type EditorDraftFile,
+} from "../services/editorDraftStorage";
 import { CloudFile } from "../types";
 import { ImageComparison } from "../components/ImageComparison";
 import { useSettingsStore } from "../store/settingsStore";
@@ -126,12 +135,19 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
     setShowGalleryModal,
     showExitDialog,
     setShowExitDialog,
+    prompt,
+    setPrompt,
+    attachedImages,
+    setAttachedImages,
     resetEditor,
   } = useEditorStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeObjectUrlRef = useRef<string | null>(null);
+  const restoreCompleteRef = useRef(false);
+  const isRestoringDraftRef = useRef(false);
+  const galleryLocalUrlsRef = useRef<Record<string, string>>({});
 
   // Custom Hooks
   const {
@@ -149,6 +165,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
     zoomOut,
     zoomReset,
     centerView,
+    loadCanvasLayer,
   } = useEditorCanvas(containerRef);
 
   const {
@@ -183,14 +200,40 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
   const [isStorageEnabled, setIsStorageEnabled] = useState(false);
 
   // Cleanup active URL
-  const cleanupActiveObjectUrl = () => {
+  const cleanupActiveObjectUrl = useCallback(() => {
     if (activeObjectUrlRef.current) {
       URL.revokeObjectURL(activeObjectUrlRef.current);
       activeObjectUrlRef.current = null;
     }
-  };
+  }, []);
+
+  const canvasToPngBlob = (canvas: HTMLCanvasElement): Promise<Blob | null> =>
+    new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+
+  const persistSourceDraft = useCallback(
+    async (blob: Blob, isNSFW: boolean, resetDraftState: boolean) => {
+      const source = await saveEditorDraftBlob("source", blob);
+      if (!source) return;
+      const currentDraft = readEditorDraft();
+      patchEditorDraft({
+        source,
+        isSourceNSFW: isNSFW,
+        prompt: resetDraftState ? "" : useEditorStore.getState().prompt,
+        attachedImages: resetDraftState
+          ? []
+          : (currentDraft?.attachedImages ?? []),
+        canvas: undefined,
+        generated: undefined,
+      });
+    },
+    [],
+  );
 
   // Init Logic
+  useEffect(() => {
+    galleryLocalUrlsRef.current = galleryLocalUrls;
+  }, [galleryLocalUrls]);
+
   useEffect(() => {
     const checkStorage = () => setIsStorageEnabled(isStorageConfigured());
     checkStorage();
@@ -198,21 +241,216 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
     return () => {
       window.removeEventListener("storage", checkStorage);
       cleanupActiveObjectUrl();
-      Object.values(galleryLocalUrls).forEach((url) =>
+      Object.values(galleryLocalUrlsRef.current).forEach((url) =>
         URL.revokeObjectURL(url as string),
       );
-      resetEditor(); // Reset store on unmount
     };
-  }, [galleryLocalUrls, resetEditor]);
+  }, [cleanupActiveObjectUrl]);
+
+  // Restore editor draft after a browser refresh or view remount.
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreDraft = async () => {
+      const draft = readEditorDraft();
+      if (!draft?.source) {
+        restoreCompleteRef.current = true;
+        return;
+      }
+
+      isRestoringDraftRef.current = true;
+      try {
+        const sourceBlob = await readEditorDraftBlob(draft.source);
+        if (!sourceBlob || cancelled) return;
+
+        cleanupActiveObjectUrl();
+        const objectUrl = URL.createObjectURL(sourceBlob);
+        activeObjectUrlRef.current = objectUrl;
+
+        const img = new Image();
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error("Failed to restore image"));
+          img.src = objectUrl;
+        });
+        if (cancelled) return;
+
+        setIsSourceNSFW(!!draft.isSourceNSFW);
+        setPrompt(draft.prompt ?? "");
+
+        const restoredRefs: string[] = [];
+        for (const ref of draft.attachedImages ?? []) {
+          const refBlob = await readEditorDraftBlob(ref);
+          if (refBlob && !cancelled) {
+            restoredRefs.push(URL.createObjectURL(refBlob));
+          }
+        }
+        if (!cancelled) setAttachedImages(restoredRefs);
+
+        initCanvas(img);
+
+        const canvasBlob = await readEditorDraftBlob(draft.canvas);
+        if (canvasBlob && !cancelled) await loadCanvasLayer(canvasBlob);
+
+        const generatedBlob = await readEditorDraftBlob(draft.generated);
+        if (generatedBlob && !cancelled) {
+          setGeneratedResult(URL.createObjectURL(generatedBlob));
+        }
+      } catch (e) {
+        console.warn("Failed to restore editor draft", e);
+      } finally {
+        if (!cancelled) {
+          isRestoringDraftRef.current = false;
+          restoreCompleteRef.current = true;
+        }
+      }
+    };
+
+    restoreDraft();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    cleanupActiveObjectUrl,
+    initCanvas,
+    loadCanvasLayer,
+    setAttachedImages,
+    setGeneratedResult,
+    setPrompt,
+  ]);
+
+  // Persist prompt text as part of the active editor draft.
+  useEffect(() => {
+    if (
+      !restoreCompleteRef.current ||
+      isRestoringDraftRef.current ||
+      !image
+    ) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const draft = readEditorDraft();
+      if (draft?.source) patchEditorDraft({ prompt });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [prompt, image]);
+
+  // Persist reference images. The UI keeps object/data URLs; the draft stores bytes.
+  useEffect(() => {
+    if (
+      !restoreCompleteRef.current ||
+      isRestoringDraftRef.current ||
+      !image
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const draft = readEditorDraft();
+        if (!draft?.source) return;
+
+        const files: EditorDraftFile[] = [];
+        for (let i = 0; i < attachedImages.length; i++) {
+          try {
+            const blob = await fetchBlob(attachedImages[i]);
+            const file = await saveEditorDraftBlob(`ref-${i}`, blob);
+            if (file) files.push(file);
+          } catch (e) {
+            console.warn("Failed to persist editor reference image", e);
+          }
+        }
+
+        if (!cancelled) patchEditorDraft({ attachedImages: files });
+      })();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [attachedImages, image]);
+
+  // Persist the transparent edit layer whenever drawing history changes.
+  useEffect(() => {
+    if (
+      !restoreCompleteRef.current ||
+      isRestoringDraftRef.current ||
+      !image ||
+      !canvasRef.current
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const draft = readEditorDraft();
+        if (!draft?.source || !canvasRef.current) return;
+
+        const blob = await canvasToPngBlob(canvasRef.current);
+        if (!blob) return;
+        const canvasFile = await saveEditorDraftBlob("canvas", blob);
+        if (canvasFile && !cancelled) {
+          patchEditorDraft({ canvas: canvasFile });
+        }
+      })();
+    }, 200);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [historyIndex, image, canvasRef]);
+
+  // Persist the completed edit result so the comparison view survives refresh.
+  useEffect(() => {
+    if (
+      !restoreCompleteRef.current ||
+      isRestoringDraftRef.current ||
+      !image
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const draft = readEditorDraft();
+        if (!draft?.source) return;
+        if (!generatedResult) {
+          patchEditorDraft({ generated: undefined });
+          return;
+        }
+
+        try {
+          const blob = await fetchBlob(generatedResult);
+          const generated = await saveEditorDraftBlob("generated", blob);
+          if (generated && !cancelled) patchEditorDraft({ generated });
+        } catch (e) {
+          console.warn("Failed to persist editor result", e);
+        }
+      })();
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [generatedResult, image]);
 
   // File Handling
   const processFile = useCallback(
     (file: File) => {
       if (!file.type.startsWith("image/")) return;
-      setIsSourceNSFW(file.name.toUpperCase().includes(".NSFW"));
+      const isNSFW = file.name.toUpperCase().includes(".NSFW");
+      setIsSourceNSFW(isNSFW);
+      setGeneratedResult(null);
       cleanupActiveObjectUrl();
       const objectUrl = URL.createObjectURL(file);
       activeObjectUrlRef.current = objectUrl;
+      void persistSourceDraft(file, isNSFW, false);
 
       const img = new Image();
       img.onload = () => initCanvas(img);
@@ -222,7 +460,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
       };
       img.src = objectUrl;
     },
-    [initCanvas],
+    [cleanupActiveObjectUrl, initCanvas, persistSourceDraft, setGeneratedResult],
   );
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -232,7 +470,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
     }
   };
 
-  const loadEditorImage = async (url: string) => {
+  const loadEditorImage = async (url: string, isNSFW: boolean) => {
     try {
       // Use fetchCloudBlob to support opfs:// and private cloud urls
       const blob = await fetchCloudBlob(url);
@@ -243,7 +481,10 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
       const img = new Image();
       img.onload = () => {
         resetEditor(); // Reset tools/prompt
+        setIsSourceNSFW(isNSFW);
+        setGeneratedResult(null);
         initCanvas(img);
+        void persistSourceDraft(blob, isNSFW, true);
       };
       img.src = objectUrl;
     } catch (e) {
@@ -252,7 +493,8 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
   };
 
   // Exit
-  const handleExit = () => {
+  const handleExit = async () => {
+    await clearEditorDraft();
     cleanupActiveObjectUrl();
     resetCanvas();
     resetEditor();
@@ -820,8 +1062,7 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                     <button
                       key={img.id}
                       onClick={() => {
-                        setIsSourceNSFW(!!img.isBlurred);
-                        loadEditorImage(img.url);
+                        loadEditorImage(img.url, !!img.isBlurred);
                         setShowHistoryModal(false);
                       }}
                       className="group relative aspect-square rounded-xl overflow-hidden border border-stroke hover:border-accent transition-all hover:ring-4 hover:ring-accent/20 focus:outline-0"
@@ -890,9 +1131,9 @@ export const ImageEditorView: React.FC<ImageEditorViewProps> = ({
                       <button
                         key={file.key}
                         onClick={() => {
-                          setIsSourceNSFW(file.key.includes(".NSFW"));
                           loadEditorImage(
                             galleryLocalUrls[file.key] || file.url,
+                            file.key.includes(".NSFW"),
                           );
                           setShowGalleryModal(false);
                         }}

@@ -108,6 +108,37 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   return `data:${blob.type || "image/png"};base64,${b64}`;
 }
 
+function imageExtension(blob: Blob): string {
+  const subtype = blob.type.match(/^image\/([a-z0-9.+-]+)$/i)?.[1]?.toLowerCase();
+  if (subtype === "jpeg") return "jpg";
+  if (subtype && /^[a-z0-9]+$/.test(subtype)) return subtype;
+  return "png";
+}
+
+async function generationImageReferences(c: AdapterContext, images: Blob[]): Promise<string[]> {
+  if (!c.uploadImage) return Promise.all(images.map(blobToBase64));
+  return Promise.all(
+    images.map((blob, index) =>
+      c.uploadImage!(
+        blob,
+        `right-code-input-${Date.now()}-${index + 1}-${crypto.randomUUID()}.${imageExtension(blob)}`,
+      ),
+    ),
+  );
+}
+
+async function chatImageUrls(c: AdapterContext, images: Blob[]): Promise<string[]> {
+  if (!c.uploadImage) return Promise.all(images.map(blobToDataUrl));
+  return Promise.all(
+    images.map((blob, index) =>
+      c.uploadImage!(
+        blob,
+        `right-code-chat-input-${Date.now()}-${index + 1}-${crypto.randomUUID()}.${imageExtension(blob)}`,
+      ),
+    ),
+  );
+}
+
 export const openaiAdapter: FormatAdapter = {
   async generate(c: AdapterContext, params: ImageParams) {
     const { width, height } = getDimensions(params.aspectRatio, params.enableHD ?? false);
@@ -122,7 +153,7 @@ export const openaiAdapter: FormatAdapter = {
 
   async edit(c: AdapterContext, images: Blob[], prompt: string, opts: EditOpts) {
     if (c.model.editEndpoint === "chatCompletions") {
-      const imageUrls = await Promise.all(images.map(blobToDataUrl));
+      const imageUrls = await chatImageUrls(c, images);
       const res = await fetchWithRetry(v1(c.apiUrl, "/chat/completions"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders(c.secret) },
@@ -154,7 +185,7 @@ export const openaiAdapter: FormatAdapter = {
       } = {
         model: c.model.modelId,
         prompt,
-        image: await Promise.all(images.map(blobToBase64)),
+        image: await generationImageReferences(c, images),
         response_format: "url",
       };
       if (opts.width && opts.height) body.size = `${opts.width}x${opts.height}`;

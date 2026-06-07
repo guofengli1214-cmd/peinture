@@ -75,6 +75,11 @@ describe("storageProxy S3-compatible endpoints", () => {
             <Size>34</Size>
           </Contents>
           <Contents>
+            <Key>peinture/right-code-input-123.png</Key>
+            <LastModified>2026-06-05T10:01:30.000Z</LastModified>
+            <Size>40</Size>
+          </Contents>
+          <Contents>
             <Key>peinture/c.txt</Key>
             <LastModified>2026-06-05T10:02:00.000Z</LastModified>
             <Size>56</Size>

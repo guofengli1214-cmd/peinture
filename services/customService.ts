@@ -8,6 +8,39 @@ import {
 import { generateUUID } from "./utils";
 
 const cleanUrl = (url: string) => url.replace(/\/+$/, "");
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+async function pollImageTask(
+  baseUrl: string,
+  taskId: string,
+  headers: Record<string, string>,
+): Promise<any> {
+  const deadline = Date.now() + 15 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await delay(2500);
+    const response = await fetch(
+      `${baseUrl}/v1/task-status?taskId=${encodeURIComponent(taskId)}`,
+      {
+        method: "GET",
+        headers,
+        credentials: "include",
+      },
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Task status failed with ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data.status === "success") return data;
+    if (data.status === "failed") {
+      throw new Error(data.error || "generationFailed");
+    }
+  }
+
+  throw new Error("generation_timeout");
+}
 
 // Helper to transform flat model array to categorized list
 export const transformModelList = (models: RemoteModel[]): RemoteModelList => {
@@ -79,9 +112,14 @@ export const generateCustomImage = async (
     throw new Error(text || `Request failed with status ${response.status}`);
   }
 
-  // Parse extended response fields
+  // Parse extended response fields. The server may return a task id so long
+  // generations can survive HTTP tunnel/proxy timeouts.
+  let data = await response.json();
+  if (data.taskId) {
+    data = await pollImageTask(baseUrl, data.taskId, headers);
+  }
+
   // Structure: { id, url, width, height, seed, steps?, guidance? }
-  const data = await response.json();
   const {
     id,
     url,
@@ -150,7 +188,12 @@ export const editImageCustom = async (
     const text = await response.text();
     throw new Error(text || `Request failed with status ${response.status}`);
   }
-  const { id, url } = await response.json();
+  let data = await response.json();
+  if (data.taskId) {
+    data = await pollImageTask(baseUrl, data.taskId, headers);
+  }
+
+  const { id, url, seed: responseSeed, steps: responseSteps } = data;
 
   if (typeof url !== "string") {
     throw new Error(
@@ -165,8 +208,8 @@ export const editImageCustom = async (
     prompt,
     aspectRatio: "custom",
     timestamp: Date.now(),
-    seed,
-    steps,
+    seed: responseSeed !== undefined ? responseSeed : seed,
+    steps: responseSteps !== undefined ? responseSteps : steps,
     provider: provider.id,
   };
 };

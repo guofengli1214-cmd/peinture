@@ -358,6 +358,7 @@ export const zh = {
   upload_ref_image: "上传参考图片",
   ref_image_n: "参考图片 {n}",
   prompt_original_image: "第1张图片是原始图片。",
+  prompt_merged_edit_image: "第1张图片是包含用户编辑标记的完整图片，请根据用户指令和图片中的编辑标记进行修改。",
   prompt_edit_layer: "第{n}张图片包含了用户的编辑操作信息，所有的修改都在此图层进行。",
   prompt_ref_image: "参考图片{n}是第{i}图片。",
   menu_replace: "替换图片",

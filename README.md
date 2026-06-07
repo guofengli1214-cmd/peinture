@@ -67,6 +67,20 @@ docker compose -f docker-compose.external-mysql.yml up -d --build
 
 The API auto-runs migrations and seeds the first admin from `ADMIN_USERNAME` / `ADMIN_PASSWORD` when the users table is empty.
 
+### Docker / 对象存储注意点
+
+- 对象存储配置保存在 MySQL 的系统配置表里，不是保存在对象存储本身。对象存储只保存图片文件。
+- 如果已经在现有 `mysql8` 容器里配置过对象存储，启动时必须继续使用外部 MySQL 版本：
+
+  ```bash
+  docker compose -f docker-compose.external-mysql.yml up -d --build
+  ```
+
+- 不要直接运行 `docker compose up -d --build` 来接这个旧环境。默认 `docker-compose.yml` 会启动项目自带的新 MySQL 服务和新数据卷 `peinture_db_data`，API 会连到一套空数据库，于是页面会显示“存储配置缺失”。这通常不是对象存储配置丢了，而是连错数据库了。
+- 不要随意执行 `docker compose down -v`、删除 MySQL 容器或删除 MySQL 数据卷；这些操作会删除数据库里的用户、会话、对象存储配置和加密后的密钥。
+- `APP_ENCRYPTION_KEY` 必须保持不变。数据库里的对象存储密钥是加密保存的，换掉这个 key 后旧密钥会无法解密，看起来也会像配置失效。
+- 编辑页上传的原图、临时输入图和草稿可以上传到对象存储，但属于内部文件，画廊列表会过滤这些内部路径；不要把 `right-code-input-*`、`right-code-chat-input-*`、`editor-drafts/` 这类内部对象当作用户画廊图片展示。
+
 ### Key environment variables (`.env`)
 
 | Var | Purpose |

@@ -1,5 +1,6 @@
 import type { AppContext } from "../context";
 import { resolveForUse } from "../services/customProviders";
+import { uploadCloudFile } from "../services/storageProxy";
 import { parseModelId } from "./models";
 import { ADAPTERS } from "./formats/index";
 import type { AdapterContext, EditOpts, FormatAdapter, ImageParams, VideoOpts } from "./formats/shared";
@@ -36,7 +37,46 @@ async function resolveCustom(
   if (model.enabled === false) throw new Error("MODEL_DISABLED");
   const adapter = ADAPTERS[cp.format];
   if (!adapter[cap]) throw new Error(`capability_not_supported:${String(cap)}`);
-  return { c: { apiUrl: cp.apiUrl, secret: cp.secret, model }, adapter };
+  return {
+    c: {
+      apiUrl: cp.apiUrl,
+      secret: cp.secret,
+      providerId: cp.id,
+      providerName: cp.name,
+      format: cp.format,
+      uploadImage: async (blob, fileName) => {
+        const buffer = Buffer.from(await blob.arrayBuffer());
+        return uploadCloudFile(ctx, buffer, fileName, blob.type || "image/png");
+      },
+      model,
+    },
+    adapter,
+  };
+}
+
+function logUpstreamFailure(ctx: AppContext, action: string, c: AdapterContext, err: unknown) {
+  if (ctx.config.nodeEnv === "test") return;
+  const e = err as {
+    message?: string;
+    cause?: { code?: string; errno?: number; syscall?: string; message?: string };
+  };
+  console.error(`[provider/${action}] upstream failed`, {
+    providerId: c.providerId,
+    providerName: c.providerName,
+    format: c.format,
+    apiUrl: c.apiUrl,
+    modelId: c.model.modelId,
+    editEndpoint: c.model.editEndpoint,
+    error: e?.message,
+    cause: e?.cause
+      ? {
+          code: e.cause.code,
+          errno: e.cause.errno,
+          syscall: e.cause.syscall,
+          message: e.cause.message,
+        }
+      : undefined,
+  });
 }
 
 export async function dispatchGenerate(
@@ -46,7 +86,13 @@ export async function dispatchGenerate(
   params: ImageParams,
 ): Promise<GenerateResult> {
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "generate");
-  const r = await adapter.generate!(c, params);
+  let r;
+  try {
+    r = await adapter.generate!(c, params);
+  } catch (err) {
+    logUpstreamFailure(ctx, "generate", c, err);
+    throw err;
+  }
   return {
     id: crypto.randomUUID(),
     url: r.url,
@@ -65,7 +111,13 @@ export async function dispatchEdit(
   opts: EditOpts,
 ): Promise<{ id: string; url: string; seed?: number }> {
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "edit");
-  const { url } = await adapter.edit!(c, images, prompt, opts);
+  let url: string;
+  try {
+    ({ url } = await adapter.edit!(c, images, prompt, opts));
+  } catch (err) {
+    logUpstreamFailure(ctx, "edit", c, err);
+    throw err;
+  }
   return { id: crypto.randomUUID(), url };
 }
 
@@ -77,7 +129,12 @@ export async function dispatchText(
   systemPrompt: string,
 ): Promise<string> {
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "text");
-  return adapter.text!(c, prompt, systemPrompt);
+  try {
+    return await adapter.text!(c, prompt, systemPrompt);
+  } catch (err) {
+    logUpstreamFailure(ctx, "text", c, err);
+    throw err;
+  }
 }
 
 /** HD upscale — a custom provider whose format supports upscale. */
@@ -88,7 +145,12 @@ export async function dispatchUpscale(
   image: Blob,
 ): Promise<{ url: string }> {
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "upscale");
-  return adapter.upscale!(c, image);
+  try {
+    return await adapter.upscale!(c, image);
+  } catch (err) {
+    logUpstreamFailure(ctx, "upscale", c, err);
+    throw err;
+  }
 }
 
 /** Image→video (Live) via a custom provider whose format supports video. */
@@ -100,5 +162,10 @@ export async function dispatchVideo(
   opts: VideoOpts,
 ): Promise<{ url: string }> {
   const { c, adapter } = await resolveCustom(ctx, userId, qualifiedModel, "video");
-  return adapter.video!(c, image, opts);
+  try {
+    return await adapter.video!(c, image, opts);
+  } catch (err) {
+    logUpstreamFailure(ctx, "video", c, err);
+    throw err;
+  }
 }

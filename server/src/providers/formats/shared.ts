@@ -41,6 +41,10 @@ export interface ModelDef {
 export interface AdapterContext {
   apiUrl: string;
   secret: string | null;
+  providerId?: string;
+  providerName?: string;
+  format?: string;
+  uploadImage?: (blob: Blob, fileName: string) => Promise<string>;
   model: ModelDef;
 }
 
@@ -97,18 +101,36 @@ export function trimBase(base: string): string {
   return base.replace(/\/+$/, "");
 }
 
+const HTML_ERROR_RE =
+  /<!doctype|<html[\s>]|<body[\s>]|ChmlFrp|无法找到您所请求的网站|Unable to find the website/i;
+const NETWORK_ERROR_RE =
+  /fetch failed|ECONNRESET|ECONNREFUSED|EAI_AGAIN|UND_ERR|socket|terminated|other side closed/i;
+
+export function normalizeUpstreamErrorMessage(message: string, status?: number): string {
+  const text = message.trim();
+  if (!text) return status ? `HTTP ${status}` : "error_api_connection";
+  if (HTML_ERROR_RE.test(text) || NETWORK_ERROR_RE.test(text)) {
+    return "error_api_connection";
+  }
+  return text.length > 4000 ? `${text.slice(0, 4000)}...` : text;
+}
+
 /** Best-effort error message from a failed upstream response. */
 export async function errText(res: Response): Promise<string> {
   try {
     const t = await res.text();
     try {
       const j = JSON.parse(t) as { error?: { message?: string } | string };
-      if (typeof j.error === "string") return j.error;
-      if (j.error?.message) return j.error.message;
+      if (typeof j.error === "string") {
+        return normalizeUpstreamErrorMessage(j.error, res.status);
+      }
+      if (j.error?.message) {
+        return normalizeUpstreamErrorMessage(j.error.message, res.status);
+      }
     } catch {
       /* not JSON */
     }
-    return t || `HTTP ${res.status}`;
+    return normalizeUpstreamErrorMessage(t || `HTTP ${res.status}`, res.status);
   } catch {
     return `HTTP ${res.status}`;
   }

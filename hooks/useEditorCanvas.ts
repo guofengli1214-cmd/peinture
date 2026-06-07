@@ -95,6 +95,50 @@ export const useEditorCanvas = (
     [containerRef, setScale, setOffset],
   );
 
+  const loadCanvasLayer = useCallback((blob: Blob): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        resolve(false);
+        return;
+      }
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(false);
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const layer = new Image();
+      layer.onload = () => {
+        URL.revokeObjectURL(url);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(layer, 0, 0, canvas.width, canvas.height);
+
+        const blankData = ctx.createImageData(canvas.width, canvas.height);
+        const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let hasPixels = false;
+        for (let i = 3; i < currentData.data.length; i += 4) {
+          if (currentData.data[i] !== 0) {
+            hasPixels = true;
+            break;
+          }
+        }
+
+        setHistoryStates(hasPixels ? [blankData, currentData] : [blankData]);
+        setHistoryIndex(hasPixels ? 1 : 0);
+        snapshotRef.current = null;
+        resolve(true);
+      };
+      layer.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(false);
+      };
+      layer.src = url;
+    });
+  }, []);
+
   // Draw Helpers
   const getCanvasCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
     if (!canvasRef.current) return { x: 0, y: 0 };
@@ -293,6 +337,7 @@ export const useEditorCanvas = (
     handleMouseMove,
     handleMouseUp,
     initCanvas,
+    loadCanvasLayer,
     resetCanvas,
     undo,
     redo,

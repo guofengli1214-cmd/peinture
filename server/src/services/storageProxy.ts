@@ -168,6 +168,24 @@ function detectFileType(key: string): CloudFile["type"] {
   return "unknown";
 }
 
+export function isHiddenCloudFileKey(keyOrUrl: string): boolean {
+  let value = keyOrUrl;
+  try {
+    const url = new URL(keyOrUrl);
+    value = decodeURIComponent(url.pathname);
+  } catch {
+    value = decodeURIComponent(keyOrUrl);
+  }
+  const normalized = value.replace(/\\/g, "/");
+  return (
+    /(?:^|\/)right-code-(?:input|chat-input)-/i.test(normalized) ||
+    /(?:^|\/)(?:__editor-drafts|editor-drafts|\.editor-drafts)\//i.test(
+      normalized,
+    ) ||
+    /(?:^|\/)(?:peinture-editor-draft|editor-draft)-/i.test(normalized)
+  );
+}
+
 function decodeXml(value: string): string {
   return value
     .replace(/&lt;/g, "<")
@@ -231,6 +249,7 @@ export async function listS3Files(config: S3Config): Promise<CloudFile[]> {
   for (const block of contents) {
     const key = xmlTag(block, "Key");
     if (!key || key === prefix) continue;
+    if (isHiddenCloudFileKey(key)) continue;
     const type = detectFileType(key);
     if (type === "unknown") continue;
     files.push({
@@ -369,6 +388,7 @@ export async function listWebDAVFiles(config: WebDAVConfig): Promise<CloudFile[]
     const path = decodeURIComponent(url.pathname).replace(/\/+$/, "");
     if (path === decodeURIComponent(basePath)) continue;
     const key = path.split("/").pop() || "";
+    if (isHiddenCloudFileKey(path) || isHiddenCloudFileKey(key)) continue;
     const type = detectFileType(key);
     if (type === "unknown") continue;
     files.push({

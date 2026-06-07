@@ -85,6 +85,23 @@ describe("OpenAI format adapter", () => {
     expect(res.url).toBe("data:image/png;base64,QUJD");
   });
 
+  it("sanitizes HTML upstream error pages", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => ({}),
+      text: async () => "<!DOCTYPE html><html><title>ChmlFrp-无法找到您所请求的网站</title></html>",
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      ADAPTERS.openai.generate!(ctx("https://relay.example.com", "sk-x", "gpt-image-1"), {
+        prompt: "a cat",
+        aspectRatio: "1:1",
+      }),
+    ).rejects.toThrow("error_api_connection");
+  });
+
   it("edit defaults to /v1/images/edits multipart", async () => {
     const fetchMock = vi.fn().mockResolvedValue(ok({ data: [{ url: "https://img/edit.png" }] }));
     vi.stubGlobal("fetch", fetchMock);
@@ -141,6 +158,46 @@ describe("OpenAI format adapter", () => {
     expect(call.body.image).toEqual(["YWJj"]);
   });
 
+  it("uses uploaded image URLs for /v1/images/generations when available", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({ data: [{ url: "https://img/right-code.png" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const uploaded: { text: string; fileName: string; type: string }[] = [];
+    const uploadImage = vi.fn(async (blob: Blob, fileName: string) => {
+      uploaded.push({ text: await blob.text(), fileName, type: blob.type });
+      return `http://cdn.example.com/${fileName}`;
+    });
+
+    const c: AdapterContext = {
+      apiUrl: "https://www.right.codes/draw",
+      secret: "sk-rc",
+      uploadImage,
+      model: {
+        modelId: "gpt-image-2",
+        name: "GPT Image 2",
+        capabilities: ["image", "edit"],
+        editEndpoint: "generations",
+      },
+    };
+    await ADAPTERS.openai.edit!(
+      c,
+      [new Blob(["abc"], { type: "image/png" }), new Blob(["def"], { type: "image/webp" })],
+      "change the background",
+      { width: 1024, height: 768 },
+    );
+
+    expect(uploadImage).toHaveBeenCalledTimes(2);
+    expect(uploaded.map((u) => u.text)).toEqual(["abc", "def"]);
+    expect(uploaded.map((u) => u.type)).toEqual(["image/png", "image/webp"]);
+    expect(uploaded[0].fileName).toMatch(/^right-code-input-.+\.png$/);
+    expect(uploaded[1].fileName).toMatch(/^right-code-input-.+\.webp$/);
+    const call = lastCall(fetchMock);
+    expect(call.body.image).toEqual([
+      expect.stringMatching(/^http:\/\/cdn\.example\.com\/right-code-input-.+\.png$/),
+      expect.stringMatching(/^http:\/\/cdn\.example\.com\/right-code-input-.+\.webp$/),
+    ]);
+    expect(call.body.image).not.toContain("YWJj");
+  });
+
   it("edit can route through streamed /v1/chat/completions and extract an image URL", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       okStream([
@@ -180,6 +237,47 @@ describe("OpenAI format adapter", () => {
       { type: "text", text: "change the background" },
       { type: "image_url", image_url: { url: "data:image/png;base64,YWJj" } },
     ]);
+  });
+
+  it("uses uploaded image URLs for streamed /v1/chat/completions when available", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okStream([
+        'data: {"choices":[{"delta":{"content":"https://file.example.com/out.png"}}]}\n\n',
+        "data: [DONE]\n\n",
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const uploadImage = vi.fn(async (_blob: Blob, fileName: string) => `http://cdn.example.com/${fileName}`);
+
+    const c: AdapterContext = {
+      apiUrl: "https://www.right.codes/draw",
+      secret: "sk-rc",
+      uploadImage,
+      model: {
+        modelId: "nano-banana-2",
+        name: "Nano Banana 2",
+        capabilities: ["image", "edit"],
+        editEndpoint: "chatCompletions",
+      },
+    };
+    const res = await ADAPTERS.openai.edit!(
+      c,
+      [new Blob(["abc"], { type: "image/png" })],
+      "change the background",
+      {},
+    );
+
+    expect(res.url).toBe("https://file.example.com/out.png");
+    expect(uploadImage).toHaveBeenCalledTimes(1);
+    const call = lastCall(fetchMock);
+    expect(call.body.messages[0].content).toEqual([
+      { type: "text", text: "change the background" },
+      {
+        type: "image_url",
+        image_url: { url: expect.stringMatching(/^http:\/\/cdn\.example\.com\/right-code-chat-input-.+\.png$/) },
+      },
+    ]);
+    expect(JSON.stringify(call.body)).not.toContain("base64");
   });
 
   it("returns a streamed chat image URL even if the upstream resets afterward", async () => {

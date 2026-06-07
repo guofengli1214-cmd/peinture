@@ -168,6 +168,7 @@ export async function adminDelete(ctx: AppContext, id: string): Promise<void> {
 
 export interface ResolvedProvider {
   id: string;
+  name: string;
   apiUrl: string;
   format: ProviderFormat;
   secret: string | null;
@@ -189,6 +190,7 @@ export async function resolveForUse(
   if (!rec || !usable) throw new Error("PROVIDER_NOT_AVAILABLE");
   return {
     id: rec.id,
+    name: rec.name,
     apiUrl: rec.apiUrl,
     format: rec.format,
     secret: rec.secretEncrypted ? ctx.crypto.decryptString(rec.secretEncrypted) : null,
